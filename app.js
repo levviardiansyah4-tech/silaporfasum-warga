@@ -1,9 +1,10 @@
 
 "use strict";
 
-/* =========================================================
-   KONFIGURASI SUPABASE
-   ========================================================= */
+/* =====================================================
+   SiLaporFasum - User App
+   GPS + Kamera + Galeri + Supabase + Pelacakan Lokal
+   ===================================================== */
 
 const SUPABASE_URL = "https://ytasgufassdscmxnjeyr.supabase.co";
 const SUPABASE_KEY = "sb_publishable_NJw5OMlXyxk6MY5vb3eovw_LMsuclg2";
@@ -12,46 +13,31 @@ const STORE_KEY = "silaporfasum_reports_v1";
 const STORAGE_BUCKET = "foto-laporan";
 
 let supabaseClient = null;
+let cameraStream = null;
+let capturedData = "";
 
-if (window.supabase && typeof window.supabase.createClient === "function") {
+if (window.supabase?.createClient) {
   supabaseClient = window.supabase.createClient(
     SUPABASE_URL,
     SUPABASE_KEY
   );
 }
 
-/* =========================================================
-   PENYIMPANAN LOKAL
-   ========================================================= */
+/* =====================================================
+   HELPER
+   ===================================================== */
 
 function getReports() {
   try {
     return JSON.parse(localStorage.getItem(STORE_KEY) || "[]");
   } catch (error) {
-    console.error("Gagal membaca data lokal:", error);
+    console.error("Gagal membaca laporan lokal:", error);
     return [];
   }
 }
 
 function saveReports(reports) {
   localStorage.setItem(STORE_KEY, JSON.stringify(reports));
-}
-
-function saveLocalReport(report) {
-  try {
-    const reports = getReports();
-    const index = reports.findIndex((item) => item.id === report.id);
-
-    if (index >= 0) {
-      reports[index] = { ...reports[index], ...report };
-    } else {
-      reports.unshift(report);
-    }
-
-    saveReports(reports);
-  } catch (error) {
-    console.warn("Salinan lokal tidak tersimpan:", error);
-  }
 }
 
 function escapeHTML(value) {
@@ -77,9 +63,33 @@ function formatDate(value) {
   });
 }
 
-/* =========================================================
-   FORM LAPORAN, KAMERA, DAN GPS
-   ========================================================= */
+function statusClass(status) {
+  return String(status || "Laporan Dikirim")
+    .toLowerCase()
+    .replaceAll(" ", "-")
+    .replaceAll("/", "-");
+}
+
+function saveLocalReport(report) {
+  try {
+    const reports = getReports();
+    const index = reports.findIndex((item) => item.id === report.id);
+
+    if (index >= 0) {
+      reports[index] = { ...reports[index], ...report };
+    } else {
+      reports.unshift(report);
+    }
+
+    saveReports(reports);
+  } catch (error) {
+    console.warn("Salinan laporan lokal gagal disimpan:", error);
+  }
+}
+
+/* =====================================================
+   ELEMEN FORM LAPORAN
+   ===================================================== */
 
 const form = document.getElementById("reportForm");
 
@@ -100,24 +110,22 @@ if (form) {
 
   const latitudeInput = document.getElementById("lat");
   const longitudeInput = document.getElementById("lon");
-  const addressInput = document.getElementById("alamat");
-
-  let cameraStream = null;
-  let capturedData = "";
 
   function showMessage(text, type = "error") {
     if (!message) return;
-
     message.textContent = text;
     message.dataset.type = type;
   }
 
   function showLocationMessage(text, type = "info") {
     if (!locationMessage) return;
-
     locationMessage.textContent = text;
     locationMessage.dataset.type = type;
   }
+
+  /* =====================================================
+     KAMERA
+     ===================================================== */
 
   function stopCamera() {
     if (cameraStream) {
@@ -133,30 +141,16 @@ if (form) {
 
     if (openCameraBtn) openCameraBtn.hidden = false;
     if (closeCameraBtn) closeCameraBtn.hidden = true;
-    if (takePhotoBtn) takePhotoBtn.hidden = true;
+    if (takePhotoBtn) {
+      takePhotoBtn.hidden = true;
+      takePhotoBtn.disabled = true;
+    }
   }
 
   function showPhotoPreview(source) {
     if (!preview) return;
 
-    // Mendukung elemen img maupun container preview.
-    if (preview.tagName === "IMG") {
-      preview.src = source;
-    } else {
-      let image = preview.querySelector("img");
-
-      if (!image) {
-        image = document.createElement("img");
-        image.alt = "Preview foto kerusakan";
-        image.style.maxWidth = "100%";
-        image.style.maxHeight = "320px";
-        image.style.objectFit = "contain";
-        preview.replaceChildren(image);
-      }
-
-      image.src = source;
-    }
-
+    preview.src = source;
     preview.hidden = false;
   }
 
@@ -169,27 +163,21 @@ if (form) {
     }
 
     if (preview) {
+      preview.removeAttribute("src");
       preview.hidden = true;
-
-      if (preview.tagName === "IMG") {
-        preview.removeAttribute("src");
-      } else {
-        preview.replaceChildren();
-      }
     }
 
     if (retakePhotoBtn) retakePhotoBtn.hidden = true;
   }
 
-  // -------------------------
-  // PILIH FOTO DARI GALERI
-  // -------------------------
-
   if (fileInput) {
     fileInput.addEventListener("change", () => {
-      const file = fileInput.files && fileInput.files[0];
+      const file = fileInput.files?.[0];
 
-      if (!file) return;
+      if (!file) {
+        if (!capturedData && preview) preview.hidden = true;
+        return;
+      }
 
       const allowedTypes = [
         "image/jpeg",
@@ -216,7 +204,9 @@ if (form) {
 
       reader.onload = () => {
         showPhotoPreview(reader.result);
+
         if (retakePhotoBtn) retakePhotoBtn.hidden = false;
+
         showMessage("", "success");
       };
 
@@ -228,15 +218,11 @@ if (form) {
     });
   }
 
-  // -------------------------
-  // BUKA KAMERA
-  // -------------------------
-
   if (openCameraBtn) {
     openCameraBtn.addEventListener("click", async () => {
       if (!navigator.mediaDevices?.getUserMedia) {
         showMessage(
-          "Kamera tidak didukung browser ini. Buka website melalui HTTPS dan gunakan browser terbaru."
+          "Kamera tidak didukung. Buka website melalui HTTPS atau localhost."
         );
         return;
       }
@@ -260,48 +246,43 @@ if (form) {
           await video.play();
         }
 
-        if (openCameraBtn) openCameraBtn.hidden = true;
+        openCameraBtn.hidden = true;
+
         if (closeCameraBtn) closeCameraBtn.hidden = false;
-        if (takePhotoBtn) takePhotoBtn.hidden = false;
+
+        if (takePhotoBtn) {
+          takePhotoBtn.hidden = false;
+          takePhotoBtn.disabled = false;
+        }
 
         showMessage("", "success");
       } catch (error) {
         console.error("Kamera gagal dibuka:", error);
 
-        let errorText = "Kamera tidak bisa dibuka.";
+        let text = "Kamera tidak dapat dibuka.";
 
         if (error.name === "NotAllowedError") {
-          errorText = "Izin kamera ditolak. Izinkan kamera melalui pengaturan browser.";
+          text = "Izin kamera ditolak. Izinkan akses kamera di pengaturan browser.";
         } else if (error.name === "NotFoundError") {
-          errorText = "Kamera tidak ditemukan pada perangkat ini.";
+          text = "Kamera tidak ditemukan pada perangkat ini.";
         } else if (error.name === "NotReadableError") {
-          errorText = "Kamera sedang digunakan aplikasi lain. Tutup aplikasi tersebut lalu coba lagi.";
+          text = "Kamera sedang digunakan aplikasi lain. Tutup aplikasi tersebut.";
         }
 
-        showMessage(errorText);
+        showMessage(text);
         stopCamera();
       }
     });
   }
 
-  // -------------------------
-  // TUTUP KAMERA
-  // -------------------------
-
   if (closeCameraBtn) {
-    closeCameraBtn.addEventListener("click", () => {
-      stopCamera();
-    });
+    closeCameraBtn.addEventListener("click", stopCamera);
   }
-
-  // -------------------------
-  // AMBIL FOTO DARI KAMERA
-  // -------------------------
 
   if (takePhotoBtn) {
     takePhotoBtn.addEventListener("click", () => {
       if (!video || !canvas || !video.videoWidth) {
-        showMessage("Kamera belum siap. Tunggu beberapa saat lalu coba lagi.");
+        showMessage("Kamera belum siap. Tunggu sebentar lalu coba lagi.");
         return;
       }
 
@@ -311,7 +292,7 @@ if (form) {
       const context = canvas.getContext("2d");
 
       if (!context) {
-        showMessage("Tidak bisa memproses foto pada browser ini.");
+        showMessage("Foto tidak dapat diproses oleh browser.");
         return;
       }
 
@@ -319,15 +300,12 @@ if (form) {
 
       capturedData = canvas.toDataURL("image/jpeg", 0.75);
 
-      const photoSize = Math.ceil(
-        (capturedData.length * 3) / 4
-      );
+      // Batas ukuran foto mengikuti batas formulir 900 KB.
+      const approximateSize = Math.ceil(capturedData.length * 0.75);
 
-      if (photoSize > 900 * 1024) {
+      if (approximateSize > 900 * 1024) {
         capturedData = "";
-        showMessage(
-          "Ukuran foto terlalu besar. Silakan ambil foto ulang."
-        );
+        showMessage("Foto terlalu besar. Silakan ambil foto ulang.");
         return;
       }
 
@@ -345,10 +323,6 @@ if (form) {
     });
   }
 
-  // -------------------------
-  // AMBIL ULANG FOTO
-  // -------------------------
-
   if (retakePhotoBtn) {
     retakePhotoBtn.addEventListener("click", () => {
       resetPhoto();
@@ -356,9 +330,9 @@ if (form) {
     });
   }
 
-  // -------------------------
-  // AMBIL LOKASI GPS
-  // -------------------------
+  /* =====================================================
+     GPS
+     ===================================================== */
 
   if (getLocationBtn) {
     getLocationBtn.addEventListener("click", () => {
@@ -378,11 +352,11 @@ if (form) {
           const lat = position.coords.latitude;
           const lon = position.coords.longitude;
 
-          if (latitudeInput) latitudeInput.value = lat;
-          if (longitudeInput) longitudeInput.value = lon;
+          if (latitudeInput) latitudeInput.value = lat.toFixed(6);
+          if (longitudeInput) longitudeInput.value = lon.toFixed(6);
 
           showLocationMessage(
-            `Lokasi berhasil ditemukan: ${lat.toFixed(6)}, ${lon.toFixed(6)}`,
+            "Lokasi berhasil diambil. Isi alamat atau patokan lokasi secara manual.",
             "success"
           );
 
@@ -391,17 +365,17 @@ if (form) {
         (error) => {
           console.error("GPS gagal:", error);
 
-          let errorText = "Gagal mengambil lokasi GPS.";
+          let text = "Gagal mengambil lokasi GPS.";
 
           if (error.code === 1) {
-            errorText = "Izin lokasi ditolak. Izinkan akses lokasi pada pengaturan browser.";
+            text = "Izin lokasi ditolak. Izinkan akses lokasi melalui browser.";
           } else if (error.code === 2) {
-            errorText = "Lokasi belum tersedia. Aktifkan layanan lokasi perangkat lalu coba lagi.";
+            text = "Lokasi belum tersedia. Aktifkan layanan lokasi perangkat.";
           } else if (error.code === 3) {
-            errorText = "GPS terlalu lama merespons. Coba lagi di area terbuka.";
+            text = "GPS terlalu lama merespons. Coba lagi di area terbuka.";
           }
 
-          showLocationMessage(errorText, "error");
+          showLocationMessage(text, "error");
           getLocationBtn.disabled = false;
         },
         {
@@ -413,9 +387,9 @@ if (form) {
     });
   }
 
-  // -------------------------
-  // KIRIM LAPORAN KE SUPABASE
-  // -------------------------
+  /* =====================================================
+     KIRIM LAPORAN KE SUPABASE
+     ===================================================== */
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -423,7 +397,7 @@ if (form) {
 
     if (!supabaseClient) {
       showMessage(
-        "Supabase belum dimuat. Periksa script CDN pada lapor.html lalu muat ulang halaman."
+        "Supabase belum termuat. Periksa script CDN di lapor.html."
       );
       return;
     }
@@ -440,29 +414,30 @@ if (form) {
       return;
     }
 
-    const nama = document.getElementById("nama")?.value.trim() || "";
-    const kontak = document.getElementById("kontak")?.value.trim() || "";
-    const kategori = document.getElementById("kategori")?.value || "";
-    const alamat = addressInput?.value.trim() || "";
-    const deskripsi = document.getElementById("deskripsi")?.value.trim() || "";
+    const nama = document.getElementById("nama").value.trim();
+    const kontak = document.getElementById("kontak").value.trim();
+    const kategori = document.getElementById("kategori").value;
+    const alamat = document.getElementById("alamat").value.trim();
+    const deskripsi = document.getElementById("deskripsi").value.trim();
 
     if (!nama || !kontak || !kategori || !alamat || !deskripsi) {
       showMessage("Lengkapi semua data laporan terlebih dahulu.");
       return;
     }
 
-    const submitButton = form.querySelector('button[type="submit"]');
-    const originalButtonHTML = submitButton?.innerHTML;
+    const button = form.querySelector('button[type="submit"]');
+    const originalButtonText = button?.innerHTML;
 
-    if (submitButton) {
-      submitButton.disabled = true;
-      submitButton.textContent = "Mengirim laporan...";
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Mengirim laporan...";
     }
 
-    const id = "SF-" + Date.now().toString().slice(-8);
-    let photoPath = null;
+    let uploadedPhotoPath = null;
 
     try {
+      const id = "SF-" + Date.now().toString().slice(-8);
+
       let photoBlob;
       let extension;
 
@@ -473,42 +448,34 @@ if (form) {
       } else {
         photoBlob = file;
         extension =
-          file.type === "image/png"
-            ? "png"
-            : file.type === "image/webp"
-              ? "webp"
-              : "jpg";
+          file.type === "image/png" ? "png" :
+          file.type === "image/webp" ? "webp" : "jpg";
       }
 
       if (photoBlob.size > 900 * 1024) {
         throw new Error("Ukuran foto maksimal 900 KB.");
       }
 
-      const contentType =
-        photoBlob.type ||
-        file?.type ||
-        "image/jpeg";
+      const contentType = photoBlob.type || "image/jpeg";
+      uploadedPhotoPath = `${id}/${Date.now()}.${extension}`;
 
-      photoPath = `${id}/${Date.now()}.${extension}`;
-
-      // Upload foto ke Supabase Storage.
-      const { error: uploadError } = await supabaseClient
-        .storage
+      // 1. Unggah foto ke bucket Storage.
+      const { error: uploadError } = await supabaseClient.storage
         .from(STORAGE_BUCKET)
-        .upload(photoPath, photoBlob, {
+        .upload(uploadedPhotoPath, photoBlob, {
           contentType,
           upsert: false
         });
 
       if (uploadError) throw uploadError;
 
-      const { data: photoData } = supabaseClient
-        .storage
+      const { data: photoData } = supabaseClient.storage
         .from(STORAGE_BUCKET)
-        .getPublicUrl(photoPath);
+        .getPublicUrl(uploadedPhotoPath);
 
-      const latitude = latitudeInput?.value.trim();
-      const longitude = longitudeInput?.value.trim();
+      // 2. Siapkan data sesuai struktur public.laporan.
+      const latValue = latitudeInput?.value.trim() || "";
+      const lonValue = longitudeInput?.value.trim() || "";
 
       const report = {
         id,
@@ -516,21 +483,21 @@ if (form) {
         kontak,
         kategori,
         alamat,
-        lat: latitude ? Number(latitude) : null,
-        lon: longitude ? Number(longitude) : null,
+        lat: latValue ? Number(latValue) : null,
+        lon: lonValue ? Number(lonValue) : null,
         deskripsi,
         foto_url: photoData.publicUrl,
         status: "Laporan Dikirim"
       };
 
-      // Simpan laporan ke tabel public.laporan.
+      // 3. Simpan ke database Supabase.
       const { error: insertError } = await supabaseClient
         .from("laporan")
         .insert(report);
 
       if (insertError) throw insertError;
 
-      // Simpan salinan untuk fitur pelacakan lama di browser ini.
+      // 4. Simpan salinan lokal untuk fitur tracking versi lama.
       saveLocalReport({
         ...report,
         foto: photoData.publicUrl,
@@ -543,84 +510,81 @@ if (form) {
       );
 
       form.reset();
-      capturedData = "";
       resetPhoto();
       stopCamera();
-      showLocationMessage("");
-      showMessage("");
+      showLocationMessage("", "info");
 
       window.location.href = "lacak.html";
     } catch (error) {
       console.error("Pengiriman laporan gagal:", error);
 
-      let errorText = error?.message || "Terjadi kesalahan yang tidak diketahui.";
+      let text = error.message || "Terjadi kesalahan saat mengirim laporan.";
 
       if (
-        errorText.toLowerCase().includes("bucket") ||
-        errorText.toLowerCase().includes("storage")
+        /row-level security|permission denied|not allowed/i.test(text)
       ) {
-        errorText +=
-          " Pastikan bucket foto-laporan tersedia dan izin upload Storage sudah diatur.";
-      } else if (
-        errorText.toLowerCase().includes("row-level security") ||
-        errorText.toLowerCase().includes("permission")
-      ) {
-        errorText +=
-          " Periksa kebijakan RLS tabel laporan dan Storage di Supabase.";
+        text += " Periksa kebijakan RLS tabel dan izin Storage di Supabase.";
+      } else if (/bucket|storage/i.test(text)) {
+        text += " Pastikan bucket foto-laporan tersedia dan kebijakan upload aktif.";
       }
 
-      showMessage("Laporan gagal dikirim: " + errorText);
+      showMessage("Laporan gagal dikirim: " + text);
     } finally {
-      if (submitButton) {
-        submitButton.disabled = false;
-        submitButton.innerHTML =
-          originalButtonHTML || 'Kirim Laporan <span>→</span>';
+      if (button) {
+        button.disabled = false;
+        button.innerHTML = originalButtonText || "Kirim Laporan →";
       }
     }
   });
 
-  // Pastikan kamera berhenti saat halaman ditinggalkan.
   window.addEventListener("pagehide", stopCamera);
 }
 
-/* =========================================================
-   PELACAKAN LAPORAN LOKAL
-   ========================================================= */
+/* =====================================================
+   PELACAKAN LOKAL
+   Data ini hanya salinan pada browser yang sama.
+   ===================================================== */
 
 const trackForm = document.getElementById("trackForm");
 
 if (trackForm) {
-  const contactInput = document.getElementById("trackContact");
-  const resultsContainer = document.getElementById("trackResults");
-
   trackForm.addEventListener("submit", (event) => {
     event.preventDefault();
 
-    if (!resultsContainer || !contactInput) return;
+    const contact = document
+      .getElementById("trackContact")
+      .value.trim()
+      .toLowerCase();
 
-    const contact = contactInput.value.trim();
+    const container = document.getElementById("trackResults");
 
-    const matches = getReports().filter(
-      (report) => String(report.kontak || "").trim() === contact
+    const found = getReports().filter(
+      (report) => String(report.kontak || "").trim().toLowerCase() === contact
     );
 
-    if (matches.length === 0) {
-      resultsContainer.innerHTML =
-        '<p class="empty-state">Laporan tidak ditemukan pada data lokal browser ini. Pastikan kontak benar atau gunakan browser yang sama dengan saat mengirim laporan.</p>';
+    if (!found.length) {
+      container.innerHTML = `
+        <div class="panel">
+          <p>Belum ada laporan dengan kontak tersebut pada data lokal browser ini.</p>
+        </div>
+      `;
       return;
     }
 
-    resultsContainer.innerHTML = matches.map((report) => `
+    container.innerHTML = found.map((report) => `
       <article class="report-card">
-        <h3>${escapeHTML(report.id)}</h3>
-        <p><strong>Kategori:</strong> ${escapeHTML(report.kategori)}</p>
-        <p><strong>Alamat:</strong> ${escapeHTML(report.alamat)}</p>
-        <p><strong>Status:</strong> ${escapeHTML(report.status || "Laporan Dikirim")}</p>
-        <p><strong>Tanggal:</strong> ${escapeHTML(formatDate(report.createdAt || report.created_at))}</p>
+        <div class="admin-row">
+          <h3>${escapeHTML(report.kategori)} · ${escapeHTML(report.id)}</h3>
+          <span class="status ${statusClass(report.status)}">
+            ${escapeHTML(report.status)}
+          </span>
+        </div>
+        <p><strong>Lokasi:</strong> ${escapeHTML(report.alamat)}</p>
         <p>${escapeHTML(report.deskripsi)}</p>
+        <p><small>Dikirim ${escapeHTML(formatDate(report.createdAt || report.created_at))}</small></p>
         ${
           report.foto_url || report.foto
-            ? `<img src="${escapeHTML(report.foto_url || report.foto)}" alt="Foto laporan" style="max-width:100%;max-height:240px;object-fit:contain;">`
+            ? `<img class="preview" src="${escapeHTML(report.foto_url || report.foto)}" alt="Foto laporan">`
             : ""
         }
       </article>
@@ -628,80 +592,73 @@ if (trackForm) {
   });
 }
 
-/* =========================================================
-   DAFTAR LAPORAN LOKAL UNTUK HALAMAN DEMO ADMIN
-   ========================================================= */
+/* =====================================================
+   ADMIN DEMO LOKAL
+   Tidak menggantikan website admin Supabase.
+   ===================================================== */
 
 const adminList = document.getElementById("adminList");
 
 if (adminList) {
-  function renderAdminList() {
+  function renderAdmin() {
     const reports = getReports();
 
-    if (reports.length === 0) {
-      adminList.innerHTML =
-        '<p class="empty-state">Belum ada laporan pada penyimpanan lokal browser ini.</p>';
+    if (!reports.length) {
+      adminList.innerHTML = `
+        <div class="panel">Belum ada laporan lokal pada browser ini.</div>
+      `;
       return;
     }
 
     adminList.innerHTML = reports.map((report) => `
-      <article class="report-card" data-report-id="${escapeHTML(report.id)}">
-        <h3>${escapeHTML(report.id)}</h3>
-        <p><strong>Nama:</strong> ${escapeHTML(report.nama)}</p>
-        <p><strong>Kontak:</strong> ${escapeHTML(report.kontak)}</p>
-        <p><strong>Kategori:</strong> ${escapeHTML(report.kategori)}</p>
-        <p><strong>Alamat:</strong> ${escapeHTML(report.alamat)}</p>
-        <p><strong>Status:</strong> ${escapeHTML(report.status || "Laporan Dikirim")}</p>
-        <p>${escapeHTML(report.deskripsi)}</p>
+      <article class="report-card">
+        <div class="admin-row">
+          <div>
+            <h3>${escapeHTML(report.kategori)} · ${escapeHTML(report.id)}</h3>
+            <p><strong>${escapeHTML(report.nama)}</strong> · ${escapeHTML(report.kontak)}</p>
+            <p>${escapeHTML(report.alamat)}</p>
+            <p>${escapeHTML(report.deskripsi)}</p>
+            <p><small>${escapeHTML(formatDate(report.createdAt || report.created_at))}</small></p>
+          </div>
+          <div>
+            <label>
+              Ubah status (lokal)
+              <select data-id="${escapeHTML(report.id)}">
+                ${[
+                  "Laporan Dikirim",
+                  "Diverifikasi",
+                  "Sedang Diproses",
+                  "Selesai Diperbaiki"
+                ].map((status) => `
+                  <option value="${status}" ${report.status === status ? "selected" : ""}>
+                    ${status}
+                  </option>
+                `).join("")}
+              </select>
+            </label>
+          </div>
+        </div>
         ${
           report.foto_url || report.foto
-            ? `<img src="${escapeHTML(report.foto_url || report.foto)}" alt="Foto laporan" style="max-width:100%;max-height:240px;object-fit:contain;">`
+            ? `<img class="preview" src="${escapeHTML(report.foto_url || report.foto)}" alt="Foto laporan">`
             : ""
         }
-        <label>
-          Ubah status (lokal)
-          <select class="local-status-select" data-report-id="${escapeHTML(report.id)}">
-            ${[
-              "Laporan Dikirim",
-              "Diverifikasi",
-              "Sedang Diproses",
-              "Selesai Diperbaiki"
-            ].map((status) => `
-              <option value="${escapeHTML(status)}" ${report.status === status ? "selected" : ""}>
-                ${escapeHTML(status)}
-              </option>
-            `).join("")}
-          </select>
-        </label>
-        <button type="button" class="save-local-status" data-report-id="${escapeHTML(report.id)}">
-          Simpan Status Lokal
-        </button>
       </article>
     `).join("");
+
+    adminList.querySelectorAll("select[data-id]").forEach((select) => {
+      select.addEventListener("change", () => {
+        const reports = getReports();
+        const item = reports.find((report) => report.id === select.dataset.id);
+
+        if (item) {
+          item.status = select.value;
+          saveReports(reports);
+          renderAdmin();
+        }
+      });
+    });
   }
 
-  adminList.addEventListener("click", (event) => {
-    const button = event.target.closest(".save-local-status");
-
-    if (!button) return;
-
-    const reportId = button.dataset.reportId;
-    const card = button.closest("[data-report-id]");
-    const select = card?.querySelector(".local-status-select");
-
-    if (!select) return;
-
-    const reports = getReports();
-    const report = reports.find((item) => item.id === reportId);
-
-    if (!report) return;
-
-    report.status = select.value;
-    saveReports(reports);
-    renderAdminList();
-
-    alert("Status berhasil diubah pada data lokal browser ini.");
-  });
-
-  renderAdminList();
+  renderAdmin();
 }
