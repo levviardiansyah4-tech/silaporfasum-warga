@@ -1,4 +1,131 @@
 <!doctype html>
-<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SiLaporFasum — Beranda</title><link rel="stylesheet" href="style.css"></head>
-<body><header class="topbar"><a class="brand" href="index.html"><span class="brand-icon">SF</span><span>SiLaporFasum<small>Layanan laporan fasilitas umum</small></span></a><nav><a class="active" href="index.html">Beranda</a><a href="lapor.html">Buat Laporan</a><a href="lacak.html">Lacak Laporan</a><a href="admin.html">Admin Demo</a></nav></header>
-<main class="hero-wrap"><section class="hero"><div class="eyebrow">UNTUK KOTA YANG LEBIH BAIK</div><h1>Laporkan kerusakan fasilitas umum dengan mudah.</h1><p>Bantu lingkungan jadi lebih nyaman dengan melaporkan jalan rusak, lampu jalan mati, taman, dan fasilitas umum lainnya.</p><div class="actions"><a class="btn primary" href="lapor.html">Buat Laporan <span>→</span></a><a class="btn secondary" href="lacak.html">Lacak Laporan</a></div><div class="hero-note"><span class="dot"></span> Prototype MVP • Penyimpanan lokal di browser</div></section><section class="feature-grid"><article class="feature"><div class="feature-icon">📍</div><h3>Lokasi jelas</h3><p>Tambahkan alamat dan titik lokasi agar laporan lebih mudah ditemukan.</p></article><article class="feature"><div class="feature-icon">📷</div><h3>Bukti foto</h3><p>Sertakan foto kondisi fasilitas untuk memberi gambaran kerusakan.</p></article><article class="feature"><div class="feature-icon">🔎</div><h3>Lacak laporan</h3><p>Periksa status laporan menggunakan email atau nomor kontak yang sama.</p></article></section></main><footer>SiLaporFasum Prototype MVP · Data tersimpan lokal pada browser ini</footer></body></html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#155eef">
+  <meta name="description" content="SiLaporFasum membantu masyarakat melaporkan kerusakan fasilitas umum dengan mudah.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="SiLaporFasum">
+  <title>SiLaporFasum — Layanan Laporan Fasilitas Umum</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html" aria-label="SiLaporFasum, Beranda">
+      <span class="brand-icon">SF</span>
+      <span class="brand-copy">SiLaporFasum<small>Layanan laporan fasilitas umum</small></span>
+    </a>
+    <nav aria-label="Navigasi utama">
+      <a class="active" href="index.html">Beranda</a>
+      <a href="lapor.html">Buat Laporan</a>
+      <a href="lacak.html">Lacak Laporan</a>
+      <a href="admin.html">Admin Demo</a>
+      <button class="install-trigger" type="button" data-install-app>
+        <span aria-hidden="true">↓</span> Instal Aplikasi
+      </button>
+    </nav>
+  </header>
+
+  <div class="install-help" data-install-help hidden role="dialog" aria-label="Petunjuk instalasi aplikasi">
+    <button class="install-help-close" type="button" data-close-install-help aria-label="Tutup petunjuk">×</button>
+    <div class="install-help-icon">↓</div>
+    <div>
+      <strong>Instal SiLaporFasum di perangkat</strong>
+      <p><b>Android:</b> buka menu Chrome (⋮), lalu pilih <em>Instal aplikasi</em> atau <em>Tambahkan ke layar utama</em>.</p>
+      <p><b>iPhone/iPad:</b> buka di Safari, tekan tombol Bagikan, lalu pilih <em>Tambah ke Layar Utama</em>.</p>
+      <p class="help-muted">Jika pilihan instal belum muncul, pastikan website dibuka melalui HTTPS.</p>
+    </div>
+  </div>
+
+  <main>
+    <section class="hero-wrap">
+      <div class="hero">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="eyebrow-dot"></span> UNTUK KOTA YANG LEBIH BAIK</div>
+          <h1>Wujudkan fasilitas umum yang lebih <span>aman dan nyaman.</span></h1>
+          <p>Temukan cara yang mudah untuk melaporkan jalan rusak, lampu jalan mati, saluran air, taman, dan fasilitas umum lainnya.</p>
+          <div class="actions">
+            <a class="btn primary" href="lapor.html">Buat Laporan <span aria-hidden="true">→</span></a>
+            <a class="btn secondary" href="lacak.html">Lacak Laporan</a>
+          </div>
+          <div class="hero-note"><span class="live-dot"></span> Pelaporan mudah · Foto dan lokasi · Terhubung ke SiLaporFasum</div>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="art-orbit orbit-one"></div>
+          <div class="art-orbit orbit-two"></div>
+          <div class="city-card">
+            <div class="city-card-top"><span class="mini-logo">SF</span><span class="card-menu">•••</span></div>
+            <div class="map-illustration">
+              <span class="map-road road-one"></span><span class="map-road road-two"></span>
+              <span class="map-road road-three"></span><span class="map-park"></span>
+              <span class="map-pin"><span></span></span>
+              <span class="map-pin pin-small"><span></span></span>
+            </div>
+            <div class="report-mini">
+              <span class="report-mini-icon">✓</span>
+              <span><b>Laporan tercatat</b><small>Informasi siap ditindaklanjuti</small></span>
+              <span class="mini-arrow">↗</span>
+            </div>
+          </div>
+          <div class="floating-chip chip-location"><span>⌖</span><b>Lokasi jelas</b></div>
+          <div class="floating-chip chip-photo"><span>▣</span><b>Bukti foto</b></div>
+        </div>
+      </div>
+
+      <div class="trust-row">
+        <div class="trust-item"><span class="trust-icon">01</span><span><b>Isi laporan</b><small>Ceritakan kerusakan</small></span></div>
+        <span class="trust-line"></span>
+        <div class="trust-item"><span class="trust-icon">02</span><span><b>Tambahkan bukti</b><small>Foto dan lokasi</small></span></div>
+        <span class="trust-line"></span>
+        <div class="trust-item"><span class="trust-icon">03</span><span><b>Pantau status</b><small>Lihat perkembangan</small></span></div>
+      </div>
+    </section>
+
+    <section class="section-block">
+      <div class="section-heading">
+        <div><div class="eyebrow">FITUR UTAMA</div><h2>Melapor jadi lebih praktis</h2></div>
+        <p>Informasi yang jelas membantu petugas memahami masalah dan menemukan lokasinya.</p>
+      </div>
+      <div class="feature-grid">
+        <article class="feature">
+          <div class="feature-icon icon-blue"><span>⌖</span></div>
+          <h3>Lokasi lebih akurat</h3>
+          <p>Masukkan alamat dan ambil koordinat GPS agar lokasi kerusakan lebih mudah ditemukan.</p>
+        </article>
+        <article class="feature">
+          <div class="feature-icon icon-violet"><span>▣</span></div>
+          <h3>Bukti foto</h3>
+          <p>Gunakan kamera atau pilih foto dari galeri untuk memperjelas kondisi fasilitas.</p>
+        </article>
+        <article class="feature">
+          <div class="feature-icon icon-green"><span>↗</span></div>
+          <h3>Pantau laporan</h3>
+          <p>Gunakan kontak yang sama untuk mencari laporan dan melihat informasi yang tersimpan.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="install-banner">
+      <div class="install-banner-icon">↓</div>
+      <div class="install-banner-copy">
+        <span class="eyebrow">LEBIH MUDAH DIAKSES</span>
+        <h2>Pasang SiLaporFasum di layar utama</h2>
+        <p>Buka seperti aplikasi dari HP tanpa perlu mencari alamat website setiap kali.</p>
+      </div>
+      <button class="btn install-banner-button" type="button" data-install-app>Instal Aplikasi <span aria-hidden="true">→</span></button>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <a class="footer-brand" href="index.html"><span class="brand-icon">SF</span><b>SiLaporFasum</b></a>
+    <span>Layanan pelaporan fasilitas umum</span>
+    <span>© <span id="currentYear">2026</span> SiLaporFasum</span>
+  </footer>
+  <script src="pwa.js"></script>
+</body>
+</html>

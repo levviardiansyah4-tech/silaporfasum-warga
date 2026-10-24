@@ -1,73 +1,69 @@
-
 <!doctype html>
 <html lang="id">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#155eef">
+  <meta name="description" content="Buat laporan kerusakan fasilitas umum melalui SiLaporFasum.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="SiLaporFasum">
   <title>Buat Laporan — SiLaporFasum</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="index.html">
+    <a class="brand" href="index.html" aria-label="SiLaporFasum, Beranda">
       <span class="brand-icon">SF</span>
-      <span>
-        SiLaporFasum
-        <small>Layanan laporan fasilitas umum</small>
-      </span>
+      <span class="brand-copy">SiLaporFasum<small>Layanan laporan fasilitas umum</small></span>
     </a>
-
-    <nav>
+    <nav aria-label="Navigasi utama">
       <a href="index.html">Beranda</a>
       <a class="active" href="lapor.html">Buat Laporan</a>
       <a href="lacak.html">Lacak Laporan</a>
       <a href="admin.html">Admin Demo</a>
+      <button class="install-trigger" type="button" data-install-app><span aria-hidden="true">↓</span> Instal Aplikasi</button>
     </nav>
   </header>
 
-  <main class="page">
+  <div class="install-help" data-install-help hidden role="dialog" aria-label="Petunjuk instalasi aplikasi">
+    <button class="install-help-close" type="button" data-close-install-help aria-label="Tutup petunjuk">×</button>
+    <div class="install-help-icon">↓</div>
+    <div>
+      <strong>Instal SiLaporFasum di perangkat</strong>
+      <p><b>Android:</b> buka menu Chrome (⋮), lalu pilih <em>Instal aplikasi</em> atau <em>Tambahkan ke layar utama</em>.</p>
+      <p><b>iPhone/iPad:</b> buka di Safari, tekan tombol Bagikan, lalu pilih <em>Tambah ke Layar Utama</em>.</p>
+      <p class="help-muted">Jika pilihan instal belum muncul, pastikan website dibuka melalui HTTPS.</p>
+    </div>
+  </div>
+
+  <main class="page page-form">
     <div class="page-heading">
+      <a class="back-link" href="index.html">← Kembali ke beranda</a>
       <div class="eyebrow">LAPORAN MASYARAKAT</div>
-      <h1>Laporkan Kerusakan</h1>
-      <p>
-        Lengkapi informasi di bawah ini agar laporan dapat dipahami dengan jelas.
-      </p>
+      <h1>Laporkan kerusakan</h1>
+      <p>Lengkapi informasi berikut agar laporan dapat dipahami dan ditindaklanjuti dengan jelas.</p>
     </div>
 
     <form id="reportForm" class="panel form-grid">
       <div class="notice">
-        <span>ℹ</span>
-        <div>
-          <strong>Pengiriman laporan</strong><br>
-          Laporan dikirim ke database SiLaporFasum setelah kamu menekan tombol kirim.
-        </div>
+        <span class="notice-icon">i</span>
+        <div><strong>Pengiriman laporan</strong><br>Laporan akan dikirim ke database SiLaporFasum setelah kamu menekan tombol kirim.</div>
       </div>
 
-      <label>
-        Nama pelapor <em>*</em>
-        <input
-          id="nama"
-          name="nama"
-          required
-          maxlength="100"
-          placeholder="Nama Anda"
-        >
+      <label>Nama pelapor <em>*</em>
+        <input id="nama" name="nama" required maxlength="100" placeholder="Nama Anda" autocomplete="name">
       </label>
 
-      <label>
-        Email / nomor kontak <em>*</em>
-        <input
-          id="kontak"
-          name="kontak"
-          required
-          maxlength="120"
-          placeholder="Dipakai untuk melacak laporan"
-        >
+      <label>Email / nomor kontak <em>*</em>
+        <input id="kontak" name="kontak" required maxlength="120" placeholder="Dipakai untuk melacak laporan" autocomplete="email">
         <small>Gunakan kontak yang benar agar laporan mudah dilacak.</small>
       </label>
 
-      <label>
-        Kategori kerusakan <em>*</em>
+      <label>Kategori kerusakan <em>*</em>
         <select id="kategori" name="kategori" required>
           <option value="">Pilih kategori</option>
           <option value="Jalan Raya">Jalan Raya</option>
@@ -78,150 +74,64 @@
         </select>
       </label>
 
-      <label>
-        Foto kerusakan <em>*</em>
-        <input
-          id="foto"
-          name="foto"
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          required
-        >
-        <small>JPG, PNG, atau WebP maksimal 900 KB.</small>
+      <label>Foto kerusakan <em>*</em>
+        <input id="foto" name="foto" type="file" accept="image/jpeg,image/png,image/webp" required>
+        <small>Format JPG, PNG, atau WebP. Ukuran maksimal 900 KB.</small>
       </label>
 
       <div class="camera-box">
+        <div class="field-section-heading"><span class="field-icon">▣</span><span><b>Bukti foto</b><small>Ambil foto langsung atau pilih dari galeri.</small></span></div>
         <div class="camera-actions">
-          <button
-            type="button"
-            id="openCamera"
-            class="btn secondary small"
-          >
-            📷 Buka Kamera
-          </button>
-
-          <button
-            type="button"
-            id="closeCamera"
-            class="btn ghost small"
-            hidden
-          >
-            Tutup Kamera
-          </button>
+          <button type="button" id="openCamera" class="btn secondary small">▣ Buka Kamera</button>
+          <button type="button" id="closeCamera" class="btn ghost small" hidden>Tutup Kamera</button>
         </div>
-
         <video id="video" autoplay playsinline muted hidden></video>
         <canvas id="canvas" hidden></canvas>
-
         <div class="camera-actions">
-          <button
-            type="button"
-            id="takePhoto"
-            class="btn secondary small"
-            disabled
-            hidden
-          >
-            Ambil Foto
-          </button>
-
-          <button
-            type="button"
-            id="retakePhoto"
-            class="btn ghost small"
-            hidden
-          >
-            Foto Ulang
-          </button>
+          <button type="button" id="takePhoto" class="btn secondary small" disabled hidden>Ambil Foto</button>
+          <button type="button" id="retakePhoto" class="btn ghost small" hidden>Foto Ulang</button>
         </div>
-
-        <small>
-          Kamera membutuhkan HTTPS atau localhost. Jika tidak tersedia,
-          pilih foto dari perangkat.
-        </small>
-
-        <img
-          id="preview"
-          class="preview"
-          alt="Pratinjau foto kerusakan"
-          hidden
-        >
+        <small>Kamera membutuhkan HTTPS atau localhost. Jika tidak tersedia, pilih foto dari perangkat.</small>
+        <img id="preview" class="preview" alt="Pratinjau foto kerusakan" hidden>
       </div>
 
-      <label class="full">
-        Alamat / titik lokasi <em>*</em>
-        <input
-          id="alamat"
-          name="alamat"
-          required
-          maxlength="500"
-          placeholder="Contoh: Jl. Merdeka, dekat halte bus"
-        >
+      <label class="full">Alamat / titik lokasi <em>*</em>
+        <input id="alamat" name="alamat" required maxlength="500" placeholder="Contoh: Jl. Merdeka, dekat halte bus" autocomplete="street-address">
       </label>
 
       <div class="two-col">
-        <label>
-          Latitude (opsional)
-          <input
-            id="lat"
-            name="lat"
-            placeholder="-6.200000"
-            inputmode="decimal"
-          >
+        <label>Latitude (opsional)
+          <input id="lat" name="lat" placeholder="-6.200000" inputmode="decimal">
         </label>
-
-        <label>
-          Longitude (opsional)
-          <input
-            id="lon"
-            name="lon"
-            placeholder="106.816666"
-            inputmode="decimal"
-          >
+        <label>Longitude (opsional)
+          <input id="lon" name="lon" placeholder="106.816666" inputmode="decimal">
         </label>
       </div>
 
-      <div class="full">
-        <button
-          type="button"
-          id="getLocation"
-          class="btn secondary small"
-        >
-          📍 Ambil Lokasi Saya
-        </button>
-
-        <small id="locationMessage" role="status">
-          Izinkan akses lokasi untuk mengisi koordinat GPS.
-        </small>
+      <div class="full location-row">
+        <button type="button" id="getLocation" class="btn secondary small">⌖ Ambil Lokasi Saya</button>
+        <small id="locationMessage" role="status">Izinkan akses lokasi untuk mengisi koordinat GPS.</small>
       </div>
 
-      <label class="full">
-        Deskripsi kerusakan <em>*</em>
-        <textarea
-          id="deskripsi"
-          name="deskripsi"
-          required
-          rows="5"
-          maxlength="1500"
-          placeholder="Jelaskan kondisi kerusakan, patokan lokasi, atau informasi lain yang membantu..."
-        ></textarea>
+      <label class="full">Deskripsi kerusakan <em>*</em>
+        <textarea id="deskripsi" name="deskripsi" required rows="5" maxlength="1500" placeholder="Jelaskan kondisi kerusakan, patokan lokasi, atau informasi lain yang membantu..."></textarea>
       </label>
 
       <div class="full submit-row">
-        <button class="btn primary" type="submit">
-          Kirim Laporan <span>→</span>
-        </button>
-
+        <button class="btn primary submit-button" type="submit">Kirim Laporan <span aria-hidden="true">→</span></button>
         <span id="formMessage" role="status"></span>
       </div>
     </form>
   </main>
 
-  <footer>
-    SiLaporFasum · Pelaporan fasilitas umum
+  <footer class="site-footer">
+    <a class="footer-brand" href="index.html"><span class="brand-icon">SF</span><b>SiLaporFasum</b></a>
+    <span>Pelaporan fasilitas umum</span>
+    <a href="lacak.html">Lacak laporan →</a>
   </footer>
 
-  <!-- Library Supabase harus dimuat sebelum app.js -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
+  <script src="pwa.js"></script>
 </body>
 </html>

@@ -1,4 +1,70 @@
 <!doctype html>
-<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lacak Laporan — SiLaporFasum</title><link rel="stylesheet" href="style.css"></head><body>
-<header class="topbar"><a class="brand" href="index.html"><span class="brand-icon">SF</span><span>SiLaporFasum<small>Layanan laporan fasilitas umum</small></span></a><nav><a href="index.html">Beranda</a><a href="lapor.html">Buat Laporan</a><a class="active" href="lacak.html">Lacak Laporan</a><a href="admin.html">Admin Demo</a></nav></header>
-<main class="page narrow"><div class="page-heading"><div class="eyebrow">STATUS PENGADUAN</div><h1>Lacak Laporan</h1><p>Masukkan email atau nomor kontak yang digunakan saat membuat laporan.</p></div><form id="trackForm" class="panel"><label>Email / nomor kontak<input id="trackContact" required placeholder="Email atau nomor kontak"></label><button class="btn primary top-gap" type="submit">Cari Laporan →</button></form><div id="trackResults" class="results"></div></main><footer>SiLaporFasum Prototype MVP · Data tersimpan lokal</footer><script src="app.js"></script></body></html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#155eef">
+  <meta name="description" content="Lacak informasi laporan fasilitas umum melalui SiLaporFasum.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="SiLaporFasum">
+  <title>Lacak Laporan — SiLaporFasum</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html" aria-label="SiLaporFasum, Beranda">
+      <span class="brand-icon">SF</span>
+      <span class="brand-copy">SiLaporFasum<small>Layanan laporan fasilitas umum</small></span>
+    </a>
+    <nav aria-label="Navigasi utama">
+      <a href="index.html">Beranda</a>
+      <a href="lapor.html">Buat Laporan</a>
+      <a class="active" href="lacak.html">Lacak Laporan</a>
+      <a href="admin.html">Admin Demo</a>
+      <button class="install-trigger" type="button" data-install-app><span aria-hidden="true">↓</span> Instal Aplikasi</button>
+    </nav>
+  </header>
+
+  <div class="install-help" data-install-help hidden role="dialog" aria-label="Petunjuk instalasi aplikasi">
+    <button class="install-help-close" type="button" data-close-install-help aria-label="Tutup petunjuk">×</button>
+    <div class="install-help-icon">↓</div>
+    <div>
+      <strong>Instal SiLaporFasum di perangkat</strong>
+      <p><b>Android:</b> buka menu Chrome (⋮), lalu pilih <em>Instal aplikasi</em> atau <em>Tambahkan ke layar utama</em>.</p>
+      <p><b>iPhone/iPad:</b> buka di Safari, tekan tombol Bagikan, lalu pilih <em>Tambah ke Layar Utama</em>.</p>
+      <p class="help-muted">Jika pilihan instal belum muncul, pastikan website dibuka melalui HTTPS.</p>
+    </div>
+  </div>
+
+  <main class="page narrow page-track">
+    <div class="page-heading">
+      <a class="back-link" href="index.html">← Kembali ke beranda</a>
+      <div class="eyebrow">STATUS PENGADUAN</div>
+      <h1>Lacak laporan</h1>
+      <p>Masukkan email atau nomor kontak yang digunakan saat membuat laporan.</p>
+    </div>
+    <form id="trackForm" class="panel track-panel">
+      <div class="track-icon">⌕</div>
+      <label for="trackContact">Email / nomor kontak
+        <input id="trackContact" required placeholder="Email atau nomor kontak" autocomplete="email">
+      </label>
+      <button class="btn primary top-gap" type="submit">Cari Laporan <span aria-hidden="true">→</span></button>
+    </form>
+    <div id="trackResults" class="results" aria-live="polite"></div>
+    <div class="track-help"><span>i</span><p>Gunakan kontak yang sama dengan yang kamu masukkan ketika mengirim laporan.</p></div>
+  </main>
+
+  <footer class="site-footer">
+    <a class="footer-brand" href="index.html"><span class="brand-icon">SF</span><b>SiLaporFasum</b></a>
+    <span>Pelaporan fasilitas umum</span>
+    <a href="lapor.html">Buat laporan baru →</a>
+  </footer>
+
+  <script src="app.js"></script>
+  <script src="pwa.js"></script>
+</body>
+</html>

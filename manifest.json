@@ -1,0 +1,33 @@
+{
+  "id": "./index.html",
+  "name": "SiLaporFasum — Layanan Laporan Fasilitas Umum",
+  "short_name": "SiLaporFasum",
+  "description": "Laporkan kerusakan fasilitas umum dengan foto dan lokasi.",
+  "lang": "id",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f9fd",
+  "theme_color": "#155eef",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
