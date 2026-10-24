@@ -60,7 +60,145 @@ if (form) {
       info.textContent="Lokasi berhasil diambil. Isi alamat/patokan lokasi secara manual.";
     }, () => info.textContent="Lokasi gagal diambil. Pastikan izin lokasi aktif dan gunakan HTTPS.", {enableHighAccuracy:true,timeout:12000});
   });
-  form.addEventListener("submit", async e => {
+  
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  message.textContent = "";
+
+  if (!window.supabase?.createClient) {
+    message.textContent = "Library Supabase belum dimuat. Muat ulang halaman.";
+    return;
+  }
+
+  const file = fileInput.files[0];
+
+  if (!capturedData && !file) {
+    message.textContent = "Silakan pilih atau ambil foto kerusakan.";
+    return;
+  }
+
+  if (file && file.size > 900 * 1024) {
+    message.textContent = "Ukuran foto maksimal 900 KB.";
+    return;
+  }
+
+  const button = form.querySelector('button[type="submit"]');
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Mengirim laporan...";
+  }
+
+  try {
+    const supabaseClient = window.supabase.createClient(
+      "https://ytasgufassdscmxnjeyr.supabase.co",
+      "sb_publishable_NJw5OMlXyxk6MY5vb3eovw_LMsuclg2"
+    );
+
+    const id = "SF-" + Date.now().toString().slice(-8);
+
+    // Ambil foto dari kamera atau file yang dipilih.
+    let photoBlob;
+    let extension;
+
+    if (capturedData) {
+      const response = await fetch(capturedData);
+      photoBlob = await response.blob();
+      extension = "jpg";
+    } else {
+      photoBlob = file;
+      extension = file.type === "image/png"
+        ? "png"
+        : file.type === "image/webp"
+          ? "webp"
+          : "jpg";
+    }
+
+    if (photoBlob.size > 900 * 1024) {
+      throw new Error("Ukuran foto maksimal 900 KB.");
+    }
+
+    // Unggah foto ke Supabase Storage.
+    const photoPath = `${id}/${Date.now()}.${extension}`;
+
+    const { error: uploadError } = await supabaseClient.storage
+      .from("foto-laporan")
+      .upload(photoPath, photoBlob, {
+        contentType: photoBlob.type || file?.type || "image/jpeg",
+        upsert: false
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data: photoData } = supabaseClient.storage
+      .from("foto-laporan")
+      .getPublicUrl(photoPath);
+
+    // Susun data sesuai kolom tabel public.laporan.
+    const report = {
+      id,
+      nama: document.getElementById("nama").value.trim(),
+      kontak: document.getElementById("kontak").value.trim(),
+      kategori: document.getElementById("kategori").value,
+      alamat: document.getElementById("alamat").value.trim(),
+      lat: document.getElementById("lat").value.trim()
+        ? Number(document.getElementById("lat").value)
+        : null,
+      lon: document.getElementById("lon").value.trim()
+        ? Number(document.getElementById("lon").value)
+        : null,
+      deskripsi: document.getElementById("deskripsi").value.trim(),
+      foto_url: photoData.publicUrl,
+      status: "Laporan Dikirim"
+    };
+
+    // Simpan laporan ke database Supabase.
+    const { error: insertError } = await supabaseClient
+      .from("laporan")
+      .insert(report);
+
+    if (insertError) throw insertError;
+
+    // Simpan salinan lokal agar halaman tracking lama
+    // tetap dapat menampilkan laporan pada browser ini.
+    const localReport = {
+      ...report,
+      foto: capturedData || photoData.publicUrl,
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+      const reports = getReports();
+      reports.unshift(localReport);
+      saveReports(reports);
+    } catch (localError) {
+      console.warn("Salinan lokal tidak tersimpan:", localError);
+    }
+
+    alert(
+      "Laporan berhasil dikirim ke database SiLaporFasum. Nomor laporan: " +
+      id
+    );
+
+    form.reset();
+    capturedData = "";
+    preview.hidden = true;
+    fileInput.required = true;
+    document.getElementById("retakePhoto").hidden = true;
+    stopCamera();
+
+    location.href = "lacak.html";
+
+  } catch (error) {
+    console.error("Pengiriman laporan gagal:", error);
+    message.textContent = "Laporan gagal dikirim: " + error.message;
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.innerHTML = 'Kirim Laporan Demo <span>→</span>';
+    }
+  }
+});
+, async e => {
     e.preventDefault(); message.textContent="";
     const file=fileInput.files[0];
     if (!capturedData && !file) { message.textContent="Silakan pilih atau ambil foto kerusakan."; return; }
