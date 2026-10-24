@@ -1,0 +1,11 @@
+// Tambahkan ke application/config/routes.php (sebelum default_controller opsional)
+$route['silaporfasum'] = 'silaporfasum/index';
+$route['silaporfasum/lapor'] = 'silaporfasum/lapor';
+$route['silaporfasum/lacak'] = 'silaporfasum/lacak';
+$route['silaporfasum/admin'] = 'silaporfasum/admin';
+$route['silaporfasum/api_create'] = 'silaporfasum/api_create';
+$route['silaporfasum/api_track'] = 'silaporfasum/api_track';
+$route['silaporfasum/api_admin_login'] = 'silaporfasum/api_admin_login';
+$route['silaporfasum/api_admin_logout'] = 'silaporfasum/api_admin_logout';
+$route['silaporfasum/api_admin_list'] = 'silaporfasum/api_admin_list';
+$route['silaporfasum/api_admin_status'] = 'silaporfasum/api_admin_status';

@@ -1,0 +1,6 @@
+KEAMANAN
+- Jangan unggah application/config/supabase.php ke GitHub jika sudah berisi URL/key/password.
+- Jangan pernah memakai service_role key di assets/js atau HTML.
+- Ganti password admin contoh sebelum digunakan.
+- Gunakan HTTPS pada hosting.
+- Paket ini ditujukan sebagai integrasi awal/prototipe tugas, belum audit keamanan produksi.
