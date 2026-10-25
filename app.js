@@ -116,20 +116,31 @@ window.handleReportPhotoError = async function (img) {
     return;
   }
   img.dataset.photoRetry = "1";
-  if (!supabaseClient) return window.handleReportPhotoError(img);
+  if (!supabaseClient) {
+    img.replaceWith(Object.assign(document.createElement("div"), {
+      className: "history-photo-placeholder",
+      textContent: "Koneksi Supabase belum siap untuk memuat foto. Muat ulang halaman dan coba lagi."
+    }));
+    return;
+  }
   try {
     const current = img.getAttribute("src") || "";
-    const marker = "/storage/v1/object/";
-    const markerIndex = current.indexOf(marker);
     let path = "";
-    if (markerIndex >= 0) {
-      const rest = current.slice(markerIndex + marker.length);
-      const parts = rest.split("/");
-      if (["public", "sign", "authenticated"].includes(parts[0])) parts.shift();
-      if (parts[0] === STORAGE_BUCKET) parts.shift();
-      path = parts.map(part => decodeURIComponent(part)).join("/");
-    } else if (!/^https?:|^data:|^blob:/i.test(current)) {
-      path = current.replace(/^\/+/, "").replace(new RegExp("^" + STORAGE_BUCKET + "/"), "");
+    // Parse URL pathname separately so signed URL query tokens are never
+    // accidentally included as part of the Storage file name.
+    if (/^https?:\/\//i.test(current)) {
+      const parsed = new URL(current);
+      const marker = "/storage/v1/object/";
+      const markerIndex = parsed.pathname.indexOf(marker);
+      if (markerIndex >= 0) {
+        const rest = parsed.pathname.slice(markerIndex + marker.length);
+        const parts = rest.split("/").filter(Boolean);
+        if (["public", "sign", "authenticated"].includes(parts[0])) parts.shift();
+        if (parts[0] === STORAGE_BUCKET) parts.shift();
+        path = parts.map(part => decodeURIComponent(part)).join("/");
+      }
+    } else if (!/^data:|^blob:/i.test(current)) {
+      path = current.split("?")[0].replace(/^\/+/, "").replace(new RegExp("^" + STORAGE_BUCKET + "/"), "");
     }
     if (!path) throw new Error("Path foto tidak ditemukan dari URL.");
     const { data, error } = await supabaseClient.storage.from(STORAGE_BUCKET).createSignedUrl(path, 3600);
