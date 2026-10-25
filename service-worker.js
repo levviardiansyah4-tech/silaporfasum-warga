@@ -1,4 +1,4 @@
-const CACHE_NAME = "silaporfasum-user-2027-v2";
+const CACHE_NAME = "silaporfasum-user-2027-v3";
 const APP_FILES = [
   "./",
   "./index.html",

@@ -344,3 +344,7 @@ body{
 @media(prefers-reduced-motion:reduce){
   .feature,.history-card,.report-card,.topbar nav a{transition:none!important}
 }
+
+/* Foto laporan pada halaman lacak dan histori */
+.report-photo{display:block;width:100%;max-height:360px;object-fit:contain;margin:12px 0;background:#eef2f8;border-radius:14px;border:1px solid var(--line)}
+.history-photo-placeholder{width:100%;min-height:190px;display:grid;place-items:center;padding:18px;text-align:center;box-sizing:border-box;background:#eef2f8;color:#64748b;font-size:13px;border-radius:12px}

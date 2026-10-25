@@ -70,6 +70,28 @@ function statusClass(status) {
     .replaceAll("/", "-");
 }
 
+// Mendukung beberapa nama kolom foto yang mungkin digunakan pada database lama.
+function getReportPhoto(report) {
+  const raw = report?.foto_url || report?.foto || report?.photo_url || report?.gambar || report?.foto_laporan || "";
+  if (typeof raw !== "string") return "";
+  const value = raw.trim();
+  if (!value) return "";
+  if (/^https?:\/\//i.test(value) || value.startsWith("data:image/")) return value;
+  // Jika kolom hanya berisi path file di Supabase Storage, ubah menjadi URL publik.
+  const cleanPath = value.replace(/^\/+/, "");
+  try {
+    return supabaseClient?.storage.from(STORAGE_BUCKET).getPublicUrl(cleanPath).data.publicUrl || "";
+  } catch (_) {
+    return "";
+  }
+}
+
+function reportPhotoMarkup(report, className = "preview") {
+  const url = getReportPhoto(report);
+  if (!url) return '<div class="history-photo-placeholder">Foto laporan belum tersedia di database</div>';
+  return `<img class="${className}" src="${escapeHTML(url)}" alt="Foto kerusakan terlampir" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'history-photo-placeholder',textContent:'Foto tidak dapat dimuat. Periksa URL foto atau izin Storage Supabase.'}))">`;
+}
+
 function saveLocalReport(report) {
   try {
     const reports = getReports();
@@ -541,52 +563,68 @@ if (form) {
 }
 
 /* =====================================================
-   PELACAKAN LOKAL
-   Data ini hanya salinan pada browser yang sama.
+   PELACAKAN LAPORAN
+   Mencari data database Supabase terlebih dahulu, lalu memakai salinan lokal
+   jika koneksi/database belum dapat diakses.
    ===================================================== */
 
 const trackForm = document.getElementById("trackForm");
 
 if (trackForm) {
-  trackForm.addEventListener("submit", (event) => {
+  trackForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    const contact = document
-      .getElementById("trackContact")
-      .value.trim()
-      .toLowerCase();
-
+    const contact = document.getElementById("trackContact").value.trim().toLowerCase();
     const container = document.getElementById("trackResults");
+    container.innerHTML = '<div class="panel">Sedang mencari laporan...</div>';
 
-    const found = getReports().filter(
-      (report) => String(report.kontak || "").trim().toLowerCase() === contact
-    );
+    let found = [];
+    let remoteSucceeded = false;
+
+    if (supabaseClient) {
+      // Coba nama kolom foto yang umum digunakan, tanpa menampilkan kontak pada kartu.
+      const selections = [
+        "id,nama,kategori,alamat,deskripsi,foto_url,status,created_at,kontak",
+        "id,nama,kategori,alamat,deskripsi,foto,status,created_at,kontak",
+        "id,nama,kategori,alamat,deskripsi,foto_url,status,kontak",
+        "id,nama,kategori,alamat,deskripsi,foto,status,kontak"
+      ];
+      for (const columns of selections) {
+        const result = await supabaseClient.from("laporan").select(columns).eq("kontak", contact).order("id", { ascending: false });
+        if (!result.error) {
+          found = Array.isArray(result.data) ? result.data : [];
+          remoteSucceeded = true;
+          break;
+        }
+      }
+    }
+
+    if (!remoteSucceeded) {
+      found = getReports().filter((report) => String(report.kontak || "").trim().toLowerCase() === contact);
+    } else {
+      // Gabungkan salinan lokal hanya untuk melengkapi foto/tanggal bila data lokal cocok.
+      const local = getReports().filter((report) => String(report.kontak || "").trim().toLowerCase() === contact);
+      found = found.map((report) => {
+        const cached = local.find((item) => String(item.id) === String(report.id));
+        return cached ? { ...cached, ...report, foto_url: getReportPhoto(report) || getReportPhoto(cached) } : report;
+      });
+    }
 
     if (!found.length) {
-      container.innerHTML = `
-        <div class="panel">
-          <p>Belum ada laporan dengan kontak tersebut pada data lokal browser ini.</p>
-        </div>
-      `;
+      container.innerHTML = `<div class="panel"><p>${remoteSucceeded ? "Belum ada laporan dengan kontak tersebut." : "Laporan tidak ditemukan. Pastikan koneksi database tersedia atau gunakan browser yang sama saat laporan dikirim."}</p></div>`;
       return;
     }
 
     container.innerHTML = found.map((report) => `
       <article class="report-card">
         <div class="admin-row">
-          <h3>${escapeHTML(report.kategori)} · ${escapeHTML(report.id)}</h3>
-          <span class="status ${statusClass(report.status)}">
-            ${escapeHTML(report.status)}
-          </span>
+          <h3>${escapeHTML(report.kategori || "Laporan fasilitas umum")} · ${escapeHTML(report.id || "-")}</h3>
+          <span class="status ${statusClass(report.status)}">${escapeHTML(report.status || "Laporan Dikirim")}</span>
         </div>
-        <p><strong>Lokasi:</strong> ${escapeHTML(report.alamat)}</p>
-        <p>${escapeHTML(report.deskripsi)}</p>
-        <p><small>Dikirim ${escapeHTML(formatDate(report.createdAt || report.created_at))}</small></p>
-        ${
-          report.foto_url || report.foto
-            ? `<img class="preview" src="${escapeHTML(report.foto_url || report.foto)}" alt="Foto laporan">`
-            : ""
-        }
+        ${reportPhotoMarkup(report, "preview report-photo")}
+        <p><strong>Lokasi:</strong> ${escapeHTML(report.alamat || "Lokasi tidak dicantumkan")}</p>
+        <p>${escapeHTML(report.deskripsi || "Tidak ada deskripsi.")}</p>
+        <p><small>Dikirim ${escapeHTML(formatDate(report.createdAt || report.created_at || report.tanggal))}</small></p>
       </article>
     `).join("");
   });
@@ -626,9 +664,7 @@ if (historyList) {
     }
 
     historyList.innerHTML = filtered.map((report) => {
-      const photo = report.foto_url
-        ? `<img class="history-photo" src="${escapeHTML(report.foto_url)}" alt="Foto kerusakan: ${escapeHTML(report.kategori || "Fasilitas umum")}" loading="lazy" referrerpolicy="no-referrer">`
-        : '<div class="history-photo-placeholder">Foto laporan tidak tersedia</div>';
+      const photo = reportPhotoMarkup(report, "history-photo");
       const statusValue = report.status || "Laporan Dikirim";
       const date = report.created_at || report.createdAt || report.tanggal;
       return `
@@ -658,21 +694,22 @@ if (historyList) {
     historyList.innerHTML = "";
 
     try {
-      // Jangan mengambil kolom kontak/email agar tidak ikut dikirim ke halaman publik.
-      let result = await supabaseClient
-        .from("laporan")
-        .select("id,nama,kategori,alamat,deskripsi,foto_url,status,created_at")
-        .order("created_at", { ascending: false });
-
-      // Fallback jika tabel lama belum memiliki kolom created_at.
-      if (result.error && /created_at|column/i.test(result.error.message || "")) {
-        result = await supabaseClient
-          .from("laporan")
-          .select("id,nama,kategori,alamat,deskripsi,foto_url,status")
-          .order("id", { ascending: false });
+      // Jangan mengambil kolom kontak/email pada halaman publik. Coba variasi kolom
+      // foto dan tanggal agar kompatibel dengan struktur tabel yang sudah ada.
+      const attempts = [
+        { columns: "id,nama,kategori,alamat,deskripsi,foto_url,status,created_at", order: "created_at" },
+        { columns: "id,nama,kategori,alamat,deskripsi,foto,status,created_at", order: "created_at" },
+        { columns: "id,nama,kategori,alamat,deskripsi,foto_url,status", order: "id" },
+        { columns: "id,nama,kategori,alamat,deskripsi,foto,status", order: "id" },
+        { columns: "id,nama,kategori,alamat,deskripsi,foto_url,status,tanggal", order: "id" },
+        { columns: "id,nama,kategori,alamat,deskripsi,foto,status,tanggal", order: "id" }
+      ];
+      let result = null;
+      for (const attempt of attempts) {
+        result = await supabaseClient.from("laporan").select(attempt.columns).order(attempt.order, { ascending: false });
+        if (!result.error) break;
       }
-
-      if (result.error) throw result.error;
+      if (!result || result.error) throw (result?.error || new Error("Kolom laporan tidak cocok."));
       publicReports = Array.isArray(result.data) ? result.data : [];
       historyMessage.textContent = publicReports.length
         ? `Menampilkan ${publicReports.length} laporan dari database SiLaporFasum.`
