@@ -70,26 +70,40 @@ function statusClass(status) {
     .replaceAll("/", "-");
 }
 
-// Mendukung beberapa nama kolom foto yang mungkin digunakan pada database lama.
+// Mengambil foto dari kolom laporan yang umum digunakan.
+// Mendukung URL penuh, URL Supabase Storage, atau path file di bucket.
 function getReportPhoto(report) {
-  const raw = report?.foto_url || report?.foto || report?.photo_url || report?.gambar || report?.foto_laporan || "";
-  if (typeof raw !== "string") return "";
+  const candidates = [
+    report?.foto_url,
+    report?.foto,
+    report?.photo_url,
+    report?.gambar,
+    report?.foto_laporan,
+    report?.foto_bukti_url
+  ];
+  const raw = candidates.find((item) => typeof item === "string" && item.trim());
+  if (!raw) return "";
   const value = raw.trim();
-  if (!value) return "";
   if (/^https?:\/\//i.test(value) || value.startsWith("data:image/")) return value;
-  // Jika kolom hanya berisi path file di Supabase Storage, ubah menjadi URL publik.
-  const cleanPath = value.replace(/^\/+/, "");
+  if (value.startsWith("blob:")) return value;
+
+  // Jika yang tersimpan berupa path Storage, hilangkan awalan bucket bila ada.
+  let cleanPath = value.replace(/^\/+/, "");
+  cleanPath = cleanPath.replace(/^storage\/v1\/object\/(public|sign)\/foto-laporan\//i, "");
+  cleanPath = cleanPath.replace(/^foto-laporan\//i, "");
   try {
-    return supabaseClient?.storage.from(STORAGE_BUCKET).getPublicUrl(cleanPath).data.publicUrl || "";
-  } catch (_) {
+    const client = supabaseClient;
+    return client?.storage.from(STORAGE_BUCKET).getPublicUrl(cleanPath).data?.publicUrl || "";
+  } catch (error) {
+    console.warn("Tidak dapat membentuk URL foto laporan:", error);
     return "";
   }
 }
 
 function reportPhotoMarkup(report, className = "preview") {
   const url = getReportPhoto(report);
-  if (!url) return '<div class="history-photo-placeholder">Foto laporan belum tersedia di database</div>';
-  return `<img class="${className}" src="${escapeHTML(url)}" alt="Foto kerusakan terlampir" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'history-photo-placeholder',textContent:'Foto tidak dapat dimuat. Periksa URL foto atau izin Storage Supabase.'}))">`;
+  if (!url) return '<div class="history-photo-placeholder">Foto belum tersimpan pada kolom foto_url di database.</div>';
+  return `<img class="${className}" src="${escapeHTML(url)}" alt="Foto kerusakan terlampir" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'history-photo-placeholder',textContent:'URL foto ditemukan, tetapi file tidak bisa diakses. Periksa bucket foto-laporan dan izin Storage Supabase.'}))">`;
 }
 
 function saveLocalReport(report) {
@@ -584,10 +598,10 @@ if (trackForm) {
     if (supabaseClient) {
       // Coba nama kolom foto yang umum digunakan, tanpa menampilkan kontak pada kartu.
       const selections = [
+        "id,nama,kategori,alamat,deskripsi,foto_url,foto_bukti_url,status,created_at,kontak",
         "id,nama,kategori,alamat,deskripsi,foto_url,status,created_at,kontak",
         "id,nama,kategori,alamat,deskripsi,foto,status,created_at,kontak",
-        "id,nama,kategori,alamat,deskripsi,foto_url,status,kontak",
-        "id,nama,kategori,alamat,deskripsi,foto,status,kontak"
+        "id,nama,kategori,alamat,deskripsi,foto_url,status,kontak"
       ];
       for (const columns of selections) {
         const result = await supabaseClient.from("laporan").select(columns).eq("kontak", contact).order("id", { ascending: false });
@@ -697,6 +711,7 @@ if (historyList) {
       // Jangan mengambil kolom kontak/email pada halaman publik. Coba variasi kolom
       // foto dan tanggal agar kompatibel dengan struktur tabel yang sudah ada.
       const attempts = [
+        { columns: "id,nama,kategori,alamat,deskripsi,foto_url,foto_bukti_url,status,created_at", order: "created_at" },
         { columns: "id,nama,kategori,alamat,deskripsi,foto_url,status,created_at", order: "created_at" },
         { columns: "id,nama,kategori,alamat,deskripsi,foto,status,created_at", order: "created_at" },
         { columns: "id,nama,kategori,alamat,deskripsi,foto_url,status", order: "id" },
