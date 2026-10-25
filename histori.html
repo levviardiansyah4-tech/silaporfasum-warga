@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#155eef">
+  <meta name="description" content="Histori laporan fasilitas umum SiLaporFasum.">
+  <title>Histori Laporan — SiLaporFasum</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .history-toolbar{display:flex;gap:12px;flex-wrap:wrap;margin:22px 0}
+    .history-toolbar input,.history-toolbar select{min-width:0;flex:1;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--ink)}
+    .history-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:18px}
+    .history-card{overflow:hidden;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
+    .history-photo{width:100%;height:210px;object-fit:cover;display:block;background:#edf2fa}
+    .history-photo-placeholder{height:210px;display:grid;place-items:center;background:#edf2fa;color:#8492a8;font-size:13px}
+    .history-content{padding:18px}
+    .history-content h2{font-size:17px;margin:0 0 8px}
+    .history-meta{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    .history-person{display:flex;align-items:center;gap:9px;color:#334155;font-size:13px;font-weight:750}
+    .history-avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#e7efff;color:#155eef;font-weight:850;flex-shrink:0}
+    .history-detail{font-size:13px;color:#526178;margin:8px 0;overflow-wrap:anywhere}
+    .history-status{display:inline-flex;padding:5px 9px;border-radius:999px;background:#edf3ff;color:#155eef;font-size:11px;font-weight:800}
+    .history-empty{padding:24px;text-align:center;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:16px}
+    .privacy-note{font-size:12px;color:var(--muted);margin-top:12px}
+    @media(max-width:640px){.history-toolbar{flex-direction:column}.history-toolbar input,.history-toolbar select{width:100%;flex:auto}}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html" aria-label="SiLaporFasum, Beranda">
+      <span class="brand-icon">SF</span>
+      <span class="brand-copy">SiLaporFasum<small>Layanan laporan fasilitas umum</small></span>
+    </a>
+    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-navigation" aria-label="Buka menu navigasi"><span></span><span></span><span></span></button>
+    <nav id="main-navigation" aria-label="Navigasi utama">
+      <a href="index.html">Beranda</a>
+      <a href="lapor.html">Buat Laporan</a>
+      <a href="lacak.html">Lacak Laporan</a>
+      <a class="active" href="histori.html">Histori Laporan</a>
+      <button class="install-trigger" type="button" data-install-app><span aria-hidden="true">↓</span> Instal Aplikasi</button>
+    </nav>
+  </header>
+
+  <main class="page">
+    <div class="page-heading">
+      <a class="back-link" href="index.html">← Kembali ke beranda</a>
+      <div class="eyebrow">TRANSPARANSI LAPORAN</div>
+      <h1>Histori laporan masyarakat</h1>
+      <p>Daftar laporan fasilitas umum yang masuk melalui SiLaporFasum, baik dari website maupun aplikasi, selama keduanya menggunakan database yang sama.</p>
+    </div>
+    <div class="notice">
+      <span class="notice-icon">i</span>
+      <div><strong>Privasi pelapor</strong><br>Halaman ini hanya menampilkan nama, foto kerusakan, kategori, lokasi, deskripsi, tanggal, dan status. Email serta nomor kontak tidak ditampilkan.</div>
+    </div>
+    <div class="history-toolbar">
+      <input id="historySearch" type="search" placeholder="Cari kategori, nama, atau lokasi..." aria-label="Cari histori laporan">
+      <select id="historyStatus" aria-label="Filter status">
+        <option value="">Semua status</option>
+        <option>Laporan Dikirim</option>
+        <option>Diverifikasi</option>
+        <option>Sedang Diproses</option>
+        <option>Selesai Diperbaiki</option>
+      </select>
+      <button id="refreshHistory" class="btn secondary" type="button">Muat ulang</button>
+    </div>
+    <p id="historyMessage" role="status" aria-live="polite">Memuat histori laporan...</p>
+    <div id="historyList" class="history-grid"></div>
+    <p class="privacy-note">Demi privasi, jangan masukkan nomor telepon atau email ke dalam deskripsi laporan yang bersifat publik.</p>
+  </main>
+
+  <footer class="site-footer">
+    <a class="footer-brand" href="index.html"><span class="brand-icon">SF</span><b>SiLaporFasum</b></a>
+    <span>Pelaporan fasilitas umum</span>
+    <a href="lapor.html">Buat laporan baru →</a>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+  <script src="pwa.js"></script>
+</body>
+</html>

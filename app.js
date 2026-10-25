@@ -593,72 +593,100 @@ if (trackForm) {
 }
 
 /* =====================================================
-   ADMIN DEMO LOKAL
-   Tidak menggantikan website admin Supabase.
+   HISTORI PUBLIK LAPORAN
+   Hanya mengambil kolom yang aman ditampilkan.
+   Email dan nomor kontak tidak diminta dari database.
    ===================================================== */
+const historyList = document.getElementById("historyList");
 
-const adminList = document.getElementById("adminList");
+if (historyList) {
+  const historyMessage = document.getElementById("historyMessage");
+  const historySearch = document.getElementById("historySearch");
+  const historyStatus = document.getElementById("historyStatus");
+  const refreshHistory = document.getElementById("refreshHistory");
+  let publicReports = [];
 
-if (adminList) {
-  function renderAdmin() {
-    const reports = getReports();
+  function initials(name) {
+    const parts = String(name || "Pengguna").trim().split(/\s+/).filter(Boolean);
+    return parts.slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join("") || "P";
+  }
 
-    if (!reports.length) {
-      adminList.innerHTML = `
-        <div class="panel">Belum ada laporan lokal pada browser ini.</div>
-      `;
+  function renderPublicHistory() {
+    const search = String(historySearch?.value || "").trim().toLowerCase();
+    const status = String(historyStatus?.value || "");
+    const filtered = publicReports.filter((report) => {
+      const haystack = [report.nama, report.kategori, report.alamat, report.deskripsi]
+        .map((value) => String(value || "").toLowerCase()).join(" ");
+      return haystack.includes(search) && (!status || String(report.status || "Laporan Dikirim") === status);
+    });
+
+    if (!filtered.length) {
+      historyList.innerHTML = '<div class="history-empty">Tidak ada histori laporan yang cocok dengan pencarian.</div>';
       return;
     }
 
-    adminList.innerHTML = reports.map((report) => `
-      <article class="report-card">
-        <div class="admin-row">
-          <div>
-            <h3>${escapeHTML(report.kategori)} · ${escapeHTML(report.id)}</h3>
-            <p><strong>${escapeHTML(report.nama)}</strong> · ${escapeHTML(report.kontak)}</p>
-            <p>${escapeHTML(report.alamat)}</p>
-            <p>${escapeHTML(report.deskripsi)}</p>
-            <p><small>${escapeHTML(formatDate(report.createdAt || report.created_at))}</small></p>
+    historyList.innerHTML = filtered.map((report) => {
+      const photo = report.foto_url
+        ? `<img class="history-photo" src="${escapeHTML(report.foto_url)}" alt="Foto kerusakan: ${escapeHTML(report.kategori || "Fasilitas umum")}" loading="lazy" referrerpolicy="no-referrer">`
+        : '<div class="history-photo-placeholder">Foto laporan tidak tersedia</div>';
+      const statusValue = report.status || "Laporan Dikirim";
+      const date = report.created_at || report.createdAt || report.tanggal;
+      return `
+        <article class="history-card">
+          ${photo}
+          <div class="history-content">
+            <div class="history-meta">
+              <div class="history-person"><span class="history-avatar" aria-hidden="true">${escapeHTML(initials(report.nama))}</span><span>${escapeHTML(report.nama || "Pengguna SiLaporFasum")}</span></div>
+              <span class="history-status">${escapeHTML(statusValue)}</span>
+            </div>
+            <h2>${escapeHTML(report.kategori || "Laporan fasilitas umum")}</h2>
+            <p class="history-detail"><strong>Lokasi:</strong> ${escapeHTML(report.alamat || "Lokasi tidak dicantumkan")}</p>
+            <p class="history-detail">${escapeHTML(report.deskripsi || "Tidak ada deskripsi.")}</p>
+            <p class="history-detail"><small>Nomor laporan: ${escapeHTML(report.id || "-")} · ${escapeHTML(formatDate(date))}</small></p>
           </div>
-          <div>
-            <label>
-              Ubah status (lokal)
-              <select data-id="${escapeHTML(report.id)}">
-                ${[
-                  "Laporan Dikirim",
-                  "Diverifikasi",
-                  "Sedang Diproses",
-                  "Selesai Diperbaiki"
-                ].map((status) => `
-                  <option value="${status}" ${report.status === status ? "selected" : ""}>
-                    ${status}
-                  </option>
-                `).join("")}
-              </select>
-            </label>
-          </div>
-        </div>
-        ${
-          report.foto_url || report.foto
-            ? `<img class="preview" src="${escapeHTML(report.foto_url || report.foto)}" alt="Foto laporan">`
-            : ""
-        }
-      </article>
-    `).join("");
-
-    adminList.querySelectorAll("select[data-id]").forEach((select) => {
-      select.addEventListener("change", () => {
-        const reports = getReports();
-        const item = reports.find((report) => report.id === select.dataset.id);
-
-        if (item) {
-          item.status = select.value;
-          saveReports(reports);
-          renderAdmin();
-        }
-      });
-    });
+        </article>`;
+    }).join("");
   }
 
-  renderAdmin();
+  async function loadPublicHistory() {
+    if (!supabaseClient) {
+      historyMessage.textContent = "Koneksi Supabase belum tersedia. Periksa koneksi internet dan konfigurasi Supabase.";
+      return;
+    }
+
+    historyMessage.textContent = "Memuat histori laporan...";
+    historyList.innerHTML = "";
+
+    try {
+      // Jangan mengambil kolom kontak/email agar tidak ikut dikirim ke halaman publik.
+      let result = await supabaseClient
+        .from("laporan")
+        .select("id,nama,kategori,alamat,deskripsi,foto_url,status,created_at")
+        .order("created_at", { ascending: false });
+
+      // Fallback jika tabel lama belum memiliki kolom created_at.
+      if (result.error && /created_at|column/i.test(result.error.message || "")) {
+        result = await supabaseClient
+          .from("laporan")
+          .select("id,nama,kategori,alamat,deskripsi,foto_url,status")
+          .order("id", { ascending: false });
+      }
+
+      if (result.error) throw result.error;
+      publicReports = Array.isArray(result.data) ? result.data : [];
+      historyMessage.textContent = publicReports.length
+        ? `Menampilkan ${publicReports.length} laporan dari database SiLaporFasum.`
+        : "Belum ada laporan yang tersimpan di database.";
+      renderPublicHistory();
+    } catch (error) {
+      console.error("Gagal memuat histori publik:", error);
+      historyMessage.textContent = "Histori belum dapat dimuat. Pastikan tabel laporan memiliki kebijakan SELECT yang sesuai di Supabase.";
+      historyList.innerHTML = '<div class="history-empty">Data tidak dapat ditampilkan. Periksa struktur tabel dan izin baca (RLS) Supabase.</div>';
+    }
+  }
+
+  historySearch?.addEventListener("input", renderPublicHistory);
+  historyStatus?.addEventListener("change", renderPublicHistory);
+  refreshHistory?.addEventListener("click", loadPublicHistory);
+  loadPublicHistory();
 }

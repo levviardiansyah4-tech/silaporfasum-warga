@@ -13,7 +13,6 @@
 1. Buat cadangan folder website yang sekarang.
 2. Ekstrak ZIP ini.
 3. Salin file-file di dalam folder hasil ekstrak ke folder website yang aktif.
-4. Pertahankan file `admin.html` asli dari proyekmu. File itu tidak disertakan karena belum dikirim, dan link Admin Demo tetap diarahkan ke `admin.html`.
 5. Pastikan semua file PWA (`manifest.json`, `service-worker.js`, `pwa.js`, folder `icons`) ikut diunggah ke lokasi yang sama dengan `index.html`.
 6. Jalankan website lewat HTTPS. Kamera, GPS, service worker, dan instalasi PWA memerlukan HTTPS (localhost bisa dipakai untuk pengujian).
 7. Buka website di Chrome Android. Tekan tombol **Instal Aplikasi**. Jika dialog instal belum muncul, buka menu Chrome lalu pilih **Instal aplikasi** atau **Tambahkan ke layar utama**.
