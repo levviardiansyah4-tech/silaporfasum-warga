@@ -1,6 +1,6 @@
-KEAMANAN
-- Jangan unggah application/config/supabase.php ke GitHub jika sudah berisi URL/key/password.
-- Jangan pernah memakai service_role key di assets/js atau HTML.
-- Ganti password admin contoh sebelum digunakan.
-- Gunakan HTTPS pada hosting.
-- Paket ini ditujukan sebagai integrasi awal/prototipe tugas, belum audit keamanan produksi.
+KEAMANAN WEBSITE PENGGUNA SILAPORFASUM
+- Jangan unggah file konfigurasi rahasia atau password ke repository publik.
+- Jangan pernah memakai Supabase service_role key di HTML atau JavaScript frontend.
+- Gunakan publishable/anon key dan pastikan kebijakan Row Level Security (RLS) Supabase sesuai kebutuhan.
+- Gunakan HTTPS untuk kamera, GPS, service worker, dan instalasi PWA.
+- Website ini merupakan prototipe; lakukan pengujian keamanan sebelum digunakan secara luas.

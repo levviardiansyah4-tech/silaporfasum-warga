@@ -1,29 +1,38 @@
-# SiLaporFasum User Website — UI Refresh + PWA
+SiLaporFasum — Website Pengguna (UI Modern 2027)
 
-## Isi paket
-- `index.html` — beranda dengan tampilan baru
-- `lapor.html` — formulir laporan; ID elemen yang dipakai `app.js` dipertahankan
-- `lacak.html` — halaman pelacakan dengan tampilan baru
-- `app.js` — salinan dari kode yang diberikan, logika laporan tidak diubah
-- `style.css` — desain responsif baru
-- `manifest.json`, `service-worker.js`, `pwa.js` — dukungan instalasi PWA
-- `icons/` — ikon aplikasi
+MENU WEBSITE PENGGUNA
+- Beranda
+- Buat Laporan
+- Lacak Laporan
+- Histori Laporan
+- Instal Aplikasi
 
-## Cara memasang
-1. Buat cadangan folder website yang sekarang.
-2. Ekstrak ZIP ini.
-3. Salin file-file di dalam folder hasil ekstrak ke folder website yang aktif.
-5. Pastikan semua file PWA (`manifest.json`, `service-worker.js`, `pwa.js`, folder `icons`) ikut diunggah ke lokasi yang sama dengan `index.html`.
-6. Jalankan website lewat HTTPS. Kamera, GPS, service worker, dan instalasi PWA memerlukan HTTPS (localhost bisa dipakai untuk pengujian).
-7. Buka website di Chrome Android. Tekan tombol **Instal Aplikasi**. Jika dialog instal belum muncul, buka menu Chrome lalu pilih **Instal aplikasi** atau **Tambahkan ke layar utama**.
+Tidak ada menu Admin Demo atau halaman demo admin dalam paket website pengguna ini.
 
-## Catatan perilaku yang dipertahankan
-- `app.js` tetap menggunakan Supabase project dan bucket `foto-laporan` yang ada di kode sumber.
-- Pengiriman laporan, foto, kamera, GPS, dan validasi tidak diganti.
-- Halaman `lacak.html` pada kode sumber masih membaca salinan laporan dari `localStorage` browser. Pelacakan lintas perangkat belum ditambahkan dalam paket ini.
-- Service worker hanya melakukan cache pada berkas statis website. Permintaan API dan Storage Supabase tidak disimpan ke cache.
-- Tombol instal memunculkan dialog instalasi bila browser mendukungnya; pada browser lain ditampilkan petunjuk instalasi manual.
-- Jika file berubah setelah dipasang, tutup lalu buka kembali website. Bila versi lama masih tampil, hapus data situs/cache atau naikkan nama cache di `service-worker.js`.
+ISI PAKET
+- index.html: beranda
+- lapor.html: formulir laporan
+- lacak.html: pelacakan laporan
+- histori.html: histori laporan publik
+- app.js: logika laporan dan integrasi Supabase
+- style.css: desain responsif dan animasi
+- manifest.json, service-worker.js, pwa.js: dukungan instalasi PWA
+- icons/: ikon aplikasi
 
-## Keamanan
-Kunci Supabase yang digunakan adalah publishable key untuk browser. Jangan pernah menaruh `service_role` key di file frontend. Pastikan Row Level Security (RLS) dan policy Supabase tetap aktif dan sesuai kebutuhan.
+CARA MEMASANG
+1. Cadangkan folder website yang aktif.
+2. Ekstrak ZIP ini dan unggah semua isi folder ke repository GitHub Pages website pengguna.
+3. Pastikan file index.html berada di folder root publik yang benar.
+4. Commit dan push perubahan, lalu tunggu GitHub Pages selesai deploy.
+5. Buka website melalui HTTPS. Kamera, GPS, service worker, dan instalasi PWA memerlukan HTTPS (localhost dapat dipakai untuk pengujian).
+6. Jika website masih menampilkan tampilan lama, lakukan hard refresh (Ctrl+F5) pada desktop. Di HP, tutup tab, buka ulang; bila masih sama, hapus data situs/cache atau uninstall lalu instal ulang PWA. Service worker menggunakan versi cache baru untuk membantu memuat aset terbaru.
+
+CATATAN FITUR
+- Pengiriman laporan, foto, kamera, GPS, validasi, dan koneksi Supabase dipertahankan.
+- Histori membutuhkan kedua sumber (website dan aplikasi Android) menyimpan laporan ke tabel Supabase yang sama dan policy SELECT yang sesuai.
+- Lacak laporan lokal pada kode asal masih membaca salinan laporan di localStorage browser; fitur lintas perangkat bergantung pada integrasi database yang tersedia.
+- Service worker tidak menyimpan respons API dan Storage Supabase ke cache.
+- Tombol Instal Aplikasi menggunakan prompt browser jika didukung; jika tidak, petunjuk instalasi manual akan ditampilkan.
+
+KEAMANAN
+Gunakan Supabase publishable/anon key di frontend, bukan service_role key. Pastikan RLS dan policy database sesuai kebutuhan.

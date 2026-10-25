@@ -1,9 +1,10 @@
-const CACHE_NAME = "silaporfasum-user-v1";
+const CACHE_NAME = "silaporfasum-user-2027-v2";
 const APP_FILES = [
   "./",
   "./index.html",
   "./lapor.html",
   "./lacak.html",
+  "./histori.html",
   "./style.css",
   "./app.js",
   "./pwa.js",
