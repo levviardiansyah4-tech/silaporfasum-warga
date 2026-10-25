@@ -103,8 +103,46 @@ function getReportPhoto(report) {
 function reportPhotoMarkup(report, className = "preview") {
   const url = getReportPhoto(report);
   if (!url) return '<div class="history-photo-placeholder">Foto belum tersimpan pada kolom foto_url di database.</div>';
-  return `<img class="${className}" src="${escapeHTML(url)}" alt="Foto kerusakan terlampir" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'history-photo-placeholder',textContent:'URL foto ditemukan, tetapi file tidak bisa diakses. Periksa bucket foto-laporan dan izin Storage Supabase.'}))">`;
+  return `<img class="${className}" src="${escapeHTML(url)}" alt="Foto kerusakan terlampir" loading="lazy" referrerpolicy="no-referrer" data-photo-retry="0" onerror="window.handleReportPhotoError(this)">`;
 }
+
+// Jika URL publik gagal (misalnya bucket privat), coba buat signed URL dari path Storage.
+window.handleReportPhotoError = async function (img) {
+  if (!img || img.dataset.photoRetry === "1") {
+    if (img) img.replaceWith(Object.assign(document.createElement("div"), {
+      className: "history-photo-placeholder",
+      textContent: "Foto tidak bisa diakses. Periksa file di Supabase Storage dan izin baca bucket foto-laporan."
+    }));
+    return;
+  }
+  img.dataset.photoRetry = "1";
+  if (!supabaseClient) return window.handleReportPhotoError(img);
+  try {
+    const current = img.getAttribute("src") || "";
+    const marker = "/storage/v1/object/";
+    const markerIndex = current.indexOf(marker);
+    let path = "";
+    if (markerIndex >= 0) {
+      const rest = current.slice(markerIndex + marker.length);
+      const parts = rest.split("/");
+      if (["public", "sign", "authenticated"].includes(parts[0])) parts.shift();
+      if (parts[0] === STORAGE_BUCKET) parts.shift();
+      path = parts.map(part => decodeURIComponent(part)).join("/");
+    } else if (!/^https?:|^data:|^blob:/i.test(current)) {
+      path = current.replace(/^\/+/, "").replace(new RegExp("^" + STORAGE_BUCKET + "/"), "");
+    }
+    if (!path) throw new Error("Path foto tidak ditemukan dari URL.");
+    const { data, error } = await supabaseClient.storage.from(STORAGE_BUCKET).createSignedUrl(path, 3600);
+    if (error || !data?.signedUrl) throw (error || new Error("Signed URL tidak tersedia."));
+    img.src = data.signedUrl;
+  } catch (error) {
+    console.warn("Foto laporan tidak dapat dimuat:", error);
+    img.replaceWith(Object.assign(document.createElement("div"), {
+      className: "history-photo-placeholder",
+      textContent: "Foto tidak bisa diakses. Pastikan foto_url berisi URL/path file yang benar dan izin Storage mengizinkan pembacaan."
+    }));
+  }
+};
 
 function saveLocalReport(report) {
   try {
