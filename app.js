@@ -208,6 +208,119 @@ if (form) {
     locationMessage.dataset.type = type;
   }
 
+  const duplicateWarning = document.getElementById("duplicateWarning");
+
+  // Menampilkan calon laporan serupa sebelum foto diunggah dan laporan disimpan.
+  // Pengecekan bersifat peringatan: pengguna masih dapat melanjutkan jika kerusakannya berbeda.
+  function askUserAboutDuplicates(duplicates) {
+    const rows = Array.isArray(duplicates) ? duplicates.slice(0, 5) : [];
+
+    if (!rows.length) {
+      if (duplicateWarning) {
+        duplicateWarning.hidden = true;
+        duplicateWarning.innerHTML = "";
+      }
+      return Promise.resolve(true);
+    }
+
+    if (!duplicateWarning) {
+      const summary = rows.map((item) => {
+        const distance = item.distance_m == null
+          ? "alamat sama"
+          : `sekitar ${Math.round(Number(item.distance_m))} meter`;
+        return `• ${item.id || "ID tidak tersedia"} — ${item.kategori || "Kategori"} — ${item.alamat || "Alamat tidak tersedia"} — ${item.status || "Status tidak diketahui"} (${distance})`;
+      }).join("\n");
+
+      return Promise.resolve(window.confirm(
+        "Ditemukan laporan yang mungkin serupa di kategori/lokasi ini:\n\n" +
+        summary +
+        "\n\nPilih OK untuk tetap mengirim laporan baru, atau Cancel untuk membatalkan dan memeriksa laporan yang sudah ada."
+      ));
+    }
+
+    const candidatesHTML = rows.map((item) => {
+      const distance = item.distance_m == null
+        ? "Alamat sama"
+        : `±${Math.round(Number(item.distance_m))} m dari titik laporan`;
+      return `
+        <article class="duplicate-candidate">
+          <div class="duplicate-candidate-head">
+            <strong>${escapeHTML(item.id || "ID tidak tersedia")}</strong>
+            <span class="duplicate-status">${escapeHTML(item.status || "Status tidak diketahui")}</span>
+          </div>
+          <p><b>Kategori:</b> ${escapeHTML(item.kategori || "-")}</p>
+          <p><b>Lokasi:</b> ${escapeHTML(item.alamat || "-")}</p>
+          ${item.deskripsi ? `<p><b>Deskripsi:</b> ${escapeHTML(item.deskripsi)}</p>` : ""}
+          <p class="duplicate-distance">${escapeHTML(distance)}${item.created_at ? ` · Dikirim ${escapeHTML(formatDate(item.created_at))}` : ""}</p>
+        </article>
+      `;
+    }).join("");
+
+    duplicateWarning.innerHTML = `
+      <div class="duplicate-warning-title">
+        <span class="duplicate-warning-icon" aria-hidden="true">!</span>
+        <div>
+          <h3>Periksa kemungkinan laporan ganda</h3>
+          <p>Kami menemukan ${rows.length} laporan aktif dengan kategori yang sama di alamat atau titik lokasi yang berdekatan. Periksa apakah kerusakannya sudah dilaporkan.</p>
+        </div>
+      </div>
+      <div class="duplicate-candidate-list">${candidatesHTML}</div>
+      <div class="duplicate-warning-actions">
+        <button type="button" class="btn secondary" data-duplicate-action="cancel">Batalkan pengiriman</button>
+        <button type="button" class="btn primary" data-duplicate-action="continue">Tetap kirim laporan</button>
+      </div>
+      <small class="duplicate-warning-note">Peringatan ini tidak memblokir laporan. Jika kerusakannya berbeda atau muncul kembali setelah diperbaiki, kamu tetap bisa mengirim laporan baru.</small>
+    `;
+    duplicateWarning.hidden = false;
+    duplicateWarning.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+    return new Promise((resolve) => {
+      let resolved = false;
+      const finish = (shouldContinue) => {
+        if (resolved) return;
+        resolved = true;
+        duplicateWarning.hidden = true;
+        duplicateWarning.innerHTML = "";
+        resolve(shouldContinue);
+      };
+
+      duplicateWarning.querySelector('[data-duplicate-action="cancel"]')
+        ?.addEventListener("click", () => finish(false), { once: true });
+      duplicateWarning.querySelector('[data-duplicate-action="continue"]')
+        ?.addEventListener("click", () => finish(true), { once: true });
+    });
+  }
+
+  async function checkDuplicateReports(kategori, alamat, latValue, lonValue) {
+    if (!supabaseClient?.rpc) {
+      return { available: false, duplicates: [] };
+    }
+
+    const lat = latValue && Number.isFinite(Number(latValue))
+      ? Number(latValue)
+      : null;
+    const lon = lonValue && Number.isFinite(Number(lonValue))
+      ? Number(lonValue)
+      : null;
+
+    const { data, error } = await supabaseClient.rpc(
+      "silapor_check_duplicate_reports_v1",
+      {
+        p_kategori: kategori,
+        p_alamat: alamat,
+        p_lat: lat,
+        p_lon: lon
+      }
+    );
+
+    if (error) throw error;
+
+    return {
+      available: true,
+      duplicates: Array.isArray(data) ? data : []
+    };
+  }
+
   /* =====================================================
      KAMERA
      ===================================================== */
@@ -510,17 +623,57 @@ if (form) {
       return;
     }
 
+    const latValue = latitudeInput?.value.trim() || "";
+    const lonValue = longitudeInput?.value.trim() || "";
+
     const button = form.querySelector('button[type="submit"]');
     const originalButtonText = button?.innerHTML;
 
     if (button) {
       button.disabled = true;
-      button.textContent = "Mengirim laporan...";
+      button.textContent = "Memeriksa laporan serupa...";
     }
 
     let uploadedPhotoPath = null;
 
     try {
+      // Periksa kemungkinan duplikat SEBELUM mengunggah foto agar tidak meninggalkan
+      // file foto yatim ketika pengguna membatalkan laporan.
+      try {
+        const duplicateResult = await checkDuplicateReports(
+          kategori,
+          alamat,
+          latValue,
+          lonValue
+        );
+
+        if (duplicateResult.available && duplicateResult.duplicates.length > 0) {
+          const shouldContinue = await askUserAboutDuplicates(duplicateResult.duplicates);
+          if (!shouldContinue) {
+            showMessage(
+              "Pengiriman dibatalkan. Periksa laporan yang sudah ada; kamu tetap bisa mengirim jika kerusakannya berbeda.",
+              "info"
+            );
+            return;
+          }
+        } else if (!duplicateResult.available) {
+          showMessage(
+            "Pemeriksaan laporan ganda tidak tersedia. Laporan tetap dapat dikirim.",
+            "info"
+          );
+        }
+      } catch (duplicateError) {
+        // Fail-open: fitur lama tetap bisa dipakai bila migrasi RPC belum dipasang.
+        // Pesan dan console menjelaskan bahwa pemeriksaan duplikat tidak berjalan.
+        console.warn("Pemeriksaan laporan ganda tidak tersedia:", duplicateError);
+        showMessage(
+          "Pemeriksaan laporan ganda gagal dijalankan. Laporan tetap dapat dikirim; minta admin memeriksa migrasi SQL.",
+          "info"
+        );
+      }
+
+      if (button) button.textContent = "Mengirim laporan...";
+
       const id = "SF-" + Date.now().toString().slice(-8);
 
       let photoBlob;
@@ -559,9 +712,6 @@ if (form) {
         .getPublicUrl(uploadedPhotoPath);
 
       // 2. Siapkan data sesuai struktur public.laporan.
-      const latValue = latitudeInput?.value.trim() || "";
-      const lonValue = longitudeInput?.value.trim() || "";
-
       const report = {
         id,
         nama,
@@ -597,6 +747,10 @@ if (form) {
       form.reset();
       resetPhoto();
       stopCamera();
+      if (duplicateWarning) {
+        duplicateWarning.hidden = true;
+        duplicateWarning.innerHTML = "";
+      }
       showLocationMessage("", "info");
 
       window.location.href = "lacak.html";

@@ -348,3 +348,37 @@ body{
 /* Foto laporan pada halaman lacak dan histori */
 .report-photo{display:block;width:100%;max-height:360px;object-fit:contain;margin:12px 0;background:#eef2f8;border-radius:14px;border:1px solid var(--line)}
 .history-photo-placeholder{width:100%;min-height:190px;display:grid;place-items:center;padding:18px;text-align:center;box-sizing:border-box;background:#eef2f8;color:#64748b;font-size:13px;border-radius:12px}
+
+
+/* Peringatan kemungkinan laporan ganda */
+.duplicate-warning{
+  margin-top:4px;
+  padding:18px;
+  border:1px solid #f2c56d;
+  border-radius:16px;
+  background:#fff9e9;
+  color:#543d12;
+  box-shadow:0 8px 24px rgba(139,93,15,.07);
+}
+.duplicate-warning[hidden]{display:none!important}
+.duplicate-warning-title{display:flex;align-items:flex-start;gap:12px}
+.duplicate-warning-icon{
+  flex:0 0 32px;width:32px;height:32px;display:grid;place-items:center;
+  border-radius:10px;background:#ffedbf;color:#8a5700;font-weight:900;font-size:18px
+}
+.duplicate-warning h3{margin:1px 0 5px;font-size:16px;color:#68450a}
+.duplicate-warning p{margin:5px 0;font-size:12px;line-height:1.55;overflow-wrap:anywhere}
+.duplicate-candidate-list{display:grid;gap:10px;margin:14px 0}
+.duplicate-candidate{padding:12px;border:1px solid #f0dfb5;border-radius:12px;background:#fff}
+.duplicate-candidate-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.duplicate-candidate-head strong{font-size:13px;color:#172b4d}
+.duplicate-status{display:inline-flex;padding:4px 8px;border-radius:99px;background:#eef2f7;color:#46556b;font-size:10px;font-weight:800}
+.duplicate-distance{color:#8a5700!important;font-weight:700}
+.duplicate-warning-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.duplicate-warning-actions .btn{min-height:44px}
+.duplicate-warning-note{display:block;margin-top:12px;color:#78613a;font-size:11px;line-height:1.5}
+@media(max-width:560px){
+  .duplicate-warning{padding:14px;border-radius:14px}
+  .duplicate-warning-actions{flex-direction:column}
+  .duplicate-warning-actions .btn{width:100%}
+}
