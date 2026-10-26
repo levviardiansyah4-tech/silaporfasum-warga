@@ -1,0 +1,35 @@
+SiLaporFasum — Fitur Deteksi Laporan Ganda
+
+FITUR
+- Memeriksa laporan serupa sebelum foto diunggah dan sebelum baris baru disimpan.
+- Kategori harus sama.
+- Jika kedua laporan memiliki koordinat, titik laporan dibandingkan dengan radius 50 meter.
+- Sistem juga membandingkan kemiripan alamat dan deskripsi untuk mengurangi peringatan palsu.
+- Jika salah satu laporan tidak memiliki koordinat, sistem memakai kecocokan alamat dan deskripsi sebagai cadangan.
+- Peringatan menampilkan nomor laporan, kategori, lokasi, deskripsi, status, dan tanggal.
+- Nama dan kontak pelapor lain tidak diambil untuk pemeriksaan ini.
+- Pengguna bisa membatalkan pengiriman atau tetap mengirim jika kerusakan berbeda/muncul kembali.
+- Laporan yang sudah ada, data histori, status, dan struktur tabel tidak diubah.
+- Tidak ada SQL atau kolom database baru yang diperlukan.
+
+FILE YANG DIUBAH
+1. app.js — pemeriksaan laporan serupa hanya di formulir buat laporan.
+2. lapor.html — versi URL app.js diperbarui agar browser memuat script terbaru.
+3. style.css — gaya modal peringatan responsif.
+4. service-worker.js — versi cache dinaikkan agar PWA memuat aset baru.
+
+CARA MEMASANG
+1. Backup repositori website pengguna yang sedang aktif.
+2. Ekstrak ZIP.
+3. Unggah seluruh isi folder silaporfasum-warga-main ke root repositori website pengguna, dengan mempertahankan struktur folder.
+4. Commit changes dan tunggu GitHub Pages selesai deploy.
+5. Buka halaman Buat Laporan. Pada browser desktop lakukan Ctrl+Shift+R.
+6. Jika memakai PWA terpasang, tutup aplikasi sepenuhnya lalu buka kembali agar service worker baru aktif.
+7. Uji dengan laporan contoh pada kategori, alamat, koordinat, dan deskripsi yang sama. Sebelum mengirim, seharusnya muncul peringatan laporan serupa.
+8. Pilih “Batal, periksa dulu” untuk membatalkan pengiriman, atau “Tetap kirim laporan” untuk melanjutkan.
+
+CATATAN
+- Pemeriksaan mengambil maksimum 500 laporan terbaru dalam kategori yang sama.
+- Deteksi memerlukan izin SELECT Supabase untuk membaca kolom publik laporan. Jika pemeriksaan tidak tersedia, halaman menampilkan pesan dan tetap mengizinkan pengiriman agar alur lama tidak terblokir.
+- Histori dan halaman lacak tidak diubah. Bagian kode app.js mulai dari fitur pelacakan/histori dipertahankan persis seperti file sumber.
+- JavaScript lolos pemeriksaan sintaks, tetapi tetap perlu diuji pada proyek Supabase dan deployment yang sebenarnya.

@@ -208,6 +208,232 @@ if (form) {
     locationMessage.dataset.type = type;
   }
 
+
+  // Pemeriksaan laporan ganda hanya berjalan pada formulir buat laporan.
+  // Tidak mengubah data lama, histori, atau skema database.
+  let bypassDuplicateCheckOnce = false;
+  let duplicateCheckInProgress = false;
+
+  const duplicateStopWords = new Set([
+    "ada", "adanya", "agar", "akan", "atau", "bahwa", "bagi", "baru",
+    "belum", "bisa", "buat", "dan", "dari", "dengan", "di", "dalam",
+    "dekat", "depan", "ini", "itu", "jadi", "juga", "karena",
+    "ke", "kepada", "ketika", "kondisi", "lokasi", "mohon", "pada",
+    "para", "perlu", "saat", "saya", "sebagai", "seberang", "sebuah",
+    "sedang", "sekitar", "sering", "sudah", "supaya", "terdapat",
+    "tersebut", "tidak", "untuk", "yang", "jl", "jln", "jalan", "no",
+    "nomor", "rt", "rw"
+  ]);
+
+  function normalizeDuplicateText(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/\bberlubang(?:-lubang)?\b/g, "lubang")
+      .replace(/\bkerusakan\b/g, "rusak")
+      .replace(/\brusaknya\b/g, "rusak")
+      .replace(/\bpecah-pecah\b/g, "pecah")
+      .replace(/\bjln\b|\bjl\b/g, "jalan")
+      .replace(/[^a-z0-9\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function duplicateTokens(value, isAddress = false) {
+    const normalized = normalizeDuplicateText(value);
+    const extraAddressStops = isAddress ? new Set(["jalan", "gang", "blok"]) : new Set();
+    return new Set(
+      normalized.split(" ").filter((word) =>
+        word.length > 1 &&
+        !duplicateStopWords.has(word) &&
+        !extraAddressStops.has(word)
+      )
+    );
+  }
+
+  // Mengukur kesamaan kata pada dua teks, termasuk frasa dengan susunan berbeda.
+  function duplicateTextOverlap(left, right, isAddress = false) {
+    const a = duplicateTokens(left, isAddress);
+    const b = duplicateTokens(right, isAddress);
+    if (!a.size || !b.size) return 0;
+    let shared = 0;
+    for (const word of a) if (b.has(word)) shared++;
+    return shared / Math.min(a.size, b.size);
+  }
+
+  function validCoordinatePair(lat, lon) {
+    if (
+      lat === null || lat === undefined || String(lat).trim() === "" ||
+      lon === null || lon === undefined || String(lon).trim() === ""
+    ) return null;
+
+    const latitude = Number(String(lat).replace(",", "."));
+    const longitude = Number(String(lon).replace(",", "."));
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null;
+    return { lat: latitude, lon: longitude };
+  }
+
+  function duplicateDistanceMeters(first, second) {
+    const toRadians = (degrees) => degrees * Math.PI / 180;
+    const earthRadius = 6371000;
+    const dLat = toRadians(second.lat - first.lat);
+    const dLon = toRadians(second.lon - first.lon);
+    const lat1 = toRadians(first.lat);
+    const lat2 = toRadians(second.lat);
+    const a = Math.sin(dLat / 2) ** 2 +
+      Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+    const boundedA = Math.min(1, Math.max(0, a));
+    return earthRadius * 2 * Math.atan2(Math.sqrt(boundedA), Math.sqrt(1 - boundedA));
+  }
+
+  function isPotentialDuplicate(existing, current) {
+    if (
+      normalizeDuplicateText(existing.kategori) !==
+      normalizeDuplicateText(current.kategori)
+    ) return false;
+
+    const existingCoordinates = validCoordinatePair(existing.lat, existing.lon);
+    const currentCoordinates = validCoordinatePair(current.lat, current.lon);
+    const descriptionOverlap = duplicateTextOverlap(existing.deskripsi, current.deskripsi);
+    const addressOverlap = duplicateTextOverlap(existing.alamat, current.alamat, true);
+    const sameAddress = normalizeDuplicateText(existing.alamat) &&
+      normalizeDuplicateText(existing.alamat) === normalizeDuplicateText(current.alamat);
+
+    if (existingCoordinates && currentCoordinates) {
+      const distance = duplicateDistanceMeters(existingCoordinates, currentCoordinates);
+      // GPS dapat sedikit berbeda. Radius 50 m disertai kecocokan deskripsi/alamat
+      // membantu mengurangi peringatan palsu untuk kerusakan berbeda di satu area.
+      return distance <= 50 &&
+        (descriptionOverlap >= 0.35 ||
+          (addressOverlap >= 0.8 && descriptionOverlap >= 0.2));
+    }
+
+    // Cadangan bila salah satu laporan tidak memiliki koordinat GPS.
+    return Boolean(sameAddress || addressOverlap >= 0.85) &&
+      descriptionOverlap >= 0.35;
+  }
+
+  async function findPotentialDuplicateReports(current) {
+    if (!supabaseClient) {
+      return { matches: [], unavailable: true, reason: "Koneksi database belum tersedia." };
+    }
+
+    try {
+      // Hanya membaca kolom yang diperlukan untuk deteksi. Nama dan kontak pelapor
+      // tidak diambil, dan tidak ada data laporan yang diubah.
+      const { data, error } = await supabaseClient
+        .from("laporan")
+        .select("id,kategori,alamat,lat,lon,deskripsi,status,created_at")
+        .eq("kategori", current.kategori)
+        .order("created_at", { ascending: false })
+        .limit(500);
+
+      if (error) throw error;
+
+      const activeStatuses = new Set(["Laporan Dikirim", "Diverifikasi", "Sedang Diproses"]);
+      const matches = (Array.isArray(data) ? data : [])
+        .filter((existing) => isPotentialDuplicate(existing, current))
+        .sort((a, b) => {
+          const aActive = activeStatuses.has(String(a.status || ""));
+          const bActive = activeStatuses.has(String(b.status || ""));
+          if (aActive !== bActive) return aActive ? -1 : 1;
+          return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+        });
+
+      return { matches, unavailable: false };
+    } catch (error) {
+      console.warn("Pemeriksaan laporan ganda tidak berhasil:", error);
+      return {
+        matches: [],
+        unavailable: true,
+        reason: error?.message || "Database tidak dapat membaca laporan sebelumnya."
+      };
+    }
+  }
+
+  function showDuplicateWarning(matches) {
+    return new Promise((resolve) => {
+      const overlay = document.createElement("div");
+      overlay.className = "duplicate-warning-overlay";
+      overlay.setAttribute("role", "presentation");
+
+      const visibleMatches = matches.slice(0, 3);
+      const matchCards = visibleMatches.map((report) => {
+        const status = String(report.status || "Laporan Dikirim");
+        return `
+          <article class="duplicate-match-card">
+            <div class="duplicate-match-top">
+              <strong>${escapeHTML(report.kategori || "Laporan fasilitas umum")}</strong>
+              <span class="status ${escapeHTML(statusClass(status))}">${escapeHTML(status)}</span>
+            </div>
+            <p><b>Nomor laporan:</b> ${escapeHTML(report.id || "-")}</p>
+            <p><b>Lokasi:</b> ${escapeHTML(report.alamat || "Lokasi tidak dicantumkan")}</p>
+            <p>${escapeHTML(report.deskripsi || "Tidak ada deskripsi.")}</p>
+            <small>Dikirim ${escapeHTML(formatDate(report.created_at))}</small>
+          </article>`;
+      }).join("");
+
+      const hasActiveReport = matches.some((report) =>
+        ["Laporan Dikirim", "Diverifikasi", "Sedang Diproses"].includes(String(report.status || ""))
+      );
+
+      overlay.innerHTML = `
+        <section class="duplicate-warning-dialog" role="dialog" aria-modal="true"
+          aria-labelledby="duplicateWarningTitle" aria-describedby="duplicateWarningDescription" tabindex="-1">
+          <div class="duplicate-warning-heading">
+            <span class="duplicate-warning-symbol" aria-hidden="true">!</span>
+            <button type="button" class="duplicate-warning-close" data-duplicate-action="cancel" aria-label="Tutup peringatan">×</button>
+          </div>
+          <h2 id="duplicateWarningTitle">Laporan serupa sudah ada</h2>
+          <p id="duplicateWarningDescription">
+            Kami menemukan ${matches.length} laporan dengan kategori, lokasi, dan deskripsi yang mirip.
+            ${hasActiveReport
+              ? "Ada laporan yang masih menunggu atau sedang ditangani. Periksa laporan di bawah sebelum mengirim ulang."
+              : "Ada laporan sebelumnya di lokasi ini. Jika kerusakan muncul kembali atau kondisinya berbeda, kamu tetap dapat membuat laporan baru."}
+          </p>
+          <div class="duplicate-match-list">${matchCards}</div>
+          ${matches.length > visibleMatches.length
+            ? `<p class="duplicate-more-note">Dan ${matches.length - visibleMatches.length} laporan serupa lainnya terdeteksi.</p>`
+            : ""}
+          <p class="duplicate-warning-footnote">
+            Pemeriksaan ini hanya memberi peringatan. Laporan yang sudah ada tidak diubah atau dihapus.
+          </p>
+          <div class="duplicate-warning-actions">
+            <button type="button" class="btn secondary" data-duplicate-action="cancel">Batal, periksa dulu</button>
+            <button type="button" class="btn primary" data-duplicate-action="continue">Tetap kirim laporan</button>
+          </div>
+        </section>`;
+
+      document.body.appendChild(overlay);
+      let finished = false;
+
+      const finish = (continueSubmission) => {
+        if (finished) return;
+        finished = true;
+        document.removeEventListener("keydown", handleKeydown);
+        overlay.remove();
+        resolve(continueSubmission);
+      };
+
+      const handleKeydown = (event) => {
+        if (event.key === "Escape") finish(false);
+      };
+
+      overlay.addEventListener("click", (event) => {
+        const actionButton = event.target.closest("[data-duplicate-action]");
+        if (actionButton) {
+          finish(actionButton.dataset.duplicateAction === "continue");
+        } else if (event.target === overlay) {
+          finish(false);
+        }
+      });
+
+      document.addEventListener("keydown", handleKeydown);
+      overlay.querySelector(".duplicate-warning-dialog")?.focus();
+    });
+  }
   /* =====================================================
      KAMERA
      ===================================================== */
@@ -512,6 +738,66 @@ if (form) {
 
     const button = form.querySelector('button[type="submit"]');
     const originalButtonText = button?.innerHTML;
+
+    // Cek laporan serupa sebelum mengunggah foto atau membuat baris baru.
+    // Jika pengguna memilih "Tetap kirim", pengiriman dilanjutkan satu kali
+    // tanpa mengulang pemeriksaan yang sama.
+    if (bypassDuplicateCheckOnce) {
+      bypassDuplicateCheckOnce = false;
+    } else {
+      if (duplicateCheckInProgress) return;
+      duplicateCheckInProgress = true;
+
+      if (button) {
+        button.disabled = true;
+        button.textContent = "Memeriksa laporan serupa...";
+      }
+
+      let duplicateResult;
+      try {
+        const latValue = latitudeInput?.value.trim() || "";
+        const lonValue = longitudeInput?.value.trim() || "";
+        duplicateResult = await findPotentialDuplicateReports({
+          kategori,
+          alamat,
+          deskripsi,
+          lat: latValue,
+          lon: lonValue
+        });
+      } finally {
+        duplicateCheckInProgress = false;
+        if (button) {
+          button.disabled = false;
+          button.innerHTML = originalButtonText || "Kirim Laporan →";
+        }
+      }
+
+      if (duplicateResult?.unavailable) {
+        console.warn(
+          "Pemeriksaan laporan ganda tidak tersedia; pengiriman tetap diizinkan:",
+          duplicateResult.reason
+        );
+        showMessage(
+          "Pemeriksaan laporan serupa belum tersedia. Laporan tetap dapat dikirim; periksa koneksi dan izin baca database jika pesan ini terus muncul.",
+          "info"
+        );
+      } else if (duplicateResult?.matches?.length) {
+        const shouldContinue = await showDuplicateWarning(duplicateResult.matches);
+        if (!shouldContinue) {
+          showMessage("Laporan belum dikirim. Silakan periksa laporan serupa yang ditampilkan.", "info");
+          return;
+        }
+
+        bypassDuplicateCheckOnce = true;
+        if (typeof form.requestSubmit === "function") {
+          if (button) form.requestSubmit(button);
+          else form.requestSubmit();
+        } else {
+          form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+        }
+        return;
+      }
+    }
 
     if (button) {
       button.disabled = true;

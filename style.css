@@ -348,3 +348,45 @@ body{
 /* Foto laporan pada halaman lacak dan histori */
 .report-photo{display:block;width:100%;max-height:360px;object-fit:contain;margin:12px 0;background:#eef2f8;border-radius:14px;border:1px solid var(--line)}
 .history-photo-placeholder{width:100%;min-height:190px;display:grid;place-items:center;padding:18px;text-align:center;box-sizing:border-box;background:#eef2f8;color:#64748b;font-size:13px;border-radius:12px}
+
+
+/* Deteksi laporan ganda — komponen baru hanya digunakan pada formulir laporan. */
+.duplicate-warning-overlay{
+  position:fixed;inset:0;z-index:10050;display:flex;align-items:center;justify-content:center;
+  padding:16px;background:rgba(10,20,40,.62);backdrop-filter:blur(5px);
+}
+.duplicate-warning-dialog{
+  width:min(100%,600px);max-height:min(88vh,780px);overflow:auto;background:#fff;color:var(--ink);
+  border:1px solid #e2e8f0;border-radius:22px;padding:clamp(19px,4vw,28px);
+  box-shadow:0 24px 80px rgba(4,15,35,.28);outline:none;animation:duplicateDialogIn .18s ease-out;
+}
+@keyframes duplicateDialogIn{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
+.duplicate-warning-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.duplicate-warning-symbol{
+  display:grid;place-items:center;width:43px;height:43px;border-radius:14px;background:#fff2d6;
+  color:#965b00;font-size:25px;font-weight:900;
+}
+.duplicate-warning-close{
+  display:grid;place-items:center;width:40px;height:40px;border:1px solid #e0e6ef;border-radius:12px;
+  background:#fff;color:#536176;font-size:25px;cursor:pointer;
+}
+.duplicate-warning-dialog h2{margin:16px 0 8px;font-size:clamp(21px,4vw,27px);line-height:1.2;letter-spacing:-.03em}
+.duplicate-warning-dialog>p{margin:0 0 15px;color:#536176;font-size:13px;line-height:1.65}
+.duplicate-match-list{display:grid;gap:10px;margin:16px 0}
+.duplicate-match-card{padding:14px;border:1px solid #e2e8f0;border-radius:14px;background:#f8fafc;overflow-wrap:anywhere}
+.duplicate-match-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.duplicate-match-top strong{font-size:13px;color:#192b45}
+.duplicate-match-card p{margin:6px 0;color:#475569;font-size:12px;line-height:1.55}
+.duplicate-match-card small{color:#64748b;font-size:11px}
+.duplicate-more-note{font-weight:700;color:#334155!important}
+.duplicate-warning-dialog .duplicate-warning-footnote{padding:11px 12px;border-radius:10px;background:#f1f5f9;color:#526176;font-size:11px}
+.duplicate-warning-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:18px}
+.duplicate-warning-actions .btn{min-height:46px}
+@media(max-width:520px){
+  .duplicate-warning-overlay{padding:10px;align-items:flex-end}
+  .duplicate-warning-dialog{width:100%;max-height:90dvh;border-radius:22px 22px 14px 14px;padding:19px 16px calc(16px + env(safe-area-inset-bottom))}
+  .duplicate-warning-actions{display:grid;grid-template-columns:1fr}
+  .duplicate-warning-actions .btn{width:100%;min-height:48px}
+}
+@media(prefers-reduced-motion:reduce){.duplicate-warning-dialog{animation:none}}
+
