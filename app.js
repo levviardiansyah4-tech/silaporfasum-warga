@@ -981,8 +981,8 @@ if (trackForm) {
 
 /* =====================================================
    HISTORI PUBLIK LAPORAN
-   Hanya mengambil kolom yang aman ditampilkan.
-   Email dan nomor kontak tidak diminta dari database.
+   Mengambil semua laporan melalui RPC publik yang hanya mengembalikan
+   kolom non-sensitif. Tidak mengambil nama, email, atau nomor kontak.
    ===================================================== */
 const historyList = document.getElementById("historyList");
 
@@ -993,22 +993,27 @@ if (historyList) {
   const refreshHistory = document.getElementById("refreshHistory");
   let publicReports = [];
 
-  function initials(name) {
-    const parts = String(name || "Pengguna").trim().split(/\s+/).filter(Boolean);
-    return parts.slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join("") || "P";
-  }
-
   function renderPublicHistory() {
     const search = String(historySearch?.value || "").trim().toLowerCase();
     const status = String(historyStatus?.value || "");
+
     const filtered = publicReports.filter((report) => {
-      const haystack = [report.nama, report.kategori, report.alamat, report.deskripsi]
-        .map((value) => String(value || "").toLowerCase()).join(" ");
-      return haystack.includes(search) && (!status || String(report.status || "Laporan Dikirim") === status);
+      const haystack = [
+        report.id,
+        report.kategori,
+        report.alamat,
+        report.deskripsi,
+        report.status
+      ].map((value) => String(value || "").toLowerCase()).join(" ");
+
+      return haystack.includes(search) &&
+        (!status || String(report.status || "Laporan Dikirim") === status);
     });
 
     if (!filtered.length) {
-      historyList.innerHTML = '<div class="history-empty">Tidak ada histori laporan yang cocok dengan pencarian.</div>';
+      historyList.innerHTML = publicReports.length
+        ? '<div class="history-empty">Tidak ada histori laporan yang cocok dengan pencarian atau filter status.</div>'
+        : '<div class="history-empty">Belum ada laporan yang tersimpan di database.</div>';
       return;
     }
 
@@ -1016,18 +1021,19 @@ if (historyList) {
       const photo = reportPhotoMarkup(report, "history-photo");
       const statusValue = report.status || "Laporan Dikirim";
       const date = report.created_at || report.createdAt || report.tanggal;
+
       return `
         <article class="history-card">
           ${photo}
           <div class="history-content">
             <div class="history-meta">
-              <div class="history-person"><span class="history-avatar" aria-hidden="true">${escapeHTML(initials(report.nama))}</span><span>${escapeHTML(report.nama || "Pengguna SiLaporFasum")}</span></div>
+              <span class="history-report-id">Nomor laporan: ${escapeHTML(report.id || "-")}</span>
               <span class="history-status">${escapeHTML(statusValue)}</span>
             </div>
             <h2>${escapeHTML(report.kategori || "Laporan fasilitas umum")}</h2>
             <p class="history-detail"><strong>Lokasi:</strong> ${escapeHTML(report.alamat || "Lokasi tidak dicantumkan")}</p>
             <p class="history-detail">${escapeHTML(report.deskripsi || "Tidak ada deskripsi.")}</p>
-            <p class="history-detail"><small>Nomor laporan: ${escapeHTML(report.id || "-")} · ${escapeHTML(formatDate(date))}</small></p>
+            <p class="history-detail"><small>Dikirim ${escapeHTML(formatDate(date))}</small></p>
           </div>
         </article>`;
     }).join("");
@@ -1035,40 +1041,53 @@ if (historyList) {
 
   async function loadPublicHistory() {
     if (!supabaseClient) {
-      historyMessage.textContent = "Koneksi Supabase belum tersedia. Periksa koneksi internet dan konfigurasi Supabase.";
+      historyMessage.textContent = "Koneksi Supabase belum tersedia. Periksa koneksi internet dan konfigurasi aplikasi.";
+      historyList.innerHTML = '<div class="history-empty">Histori belum dapat dimuat karena koneksi database belum siap.</div>';
       return;
     }
 
-    historyMessage.textContent = "Memuat histori laporan...";
+    historyMessage.textContent = "Memuat semua histori laporan...";
     historyList.innerHTML = "";
 
     try {
-      // Jangan mengambil kolom kontak/email pada halaman publik. Coba variasi kolom
-      // foto dan tanggal agar kompatibel dengan struktur tabel yang sudah ada.
-      const attempts = [
-        { columns: "id,nama,kategori,alamat,deskripsi,foto_url,foto_bukti_url,status,created_at", order: "created_at" },
-        { columns: "id,nama,kategori,alamat,deskripsi,foto_url,status,created_at", order: "created_at" },
-        { columns: "id,nama,kategori,alamat,deskripsi,foto,status,created_at", order: "created_at" },
-        { columns: "id,nama,kategori,alamat,deskripsi,foto_url,status", order: "id" },
-        { columns: "id,nama,kategori,alamat,deskripsi,foto,status", order: "id" },
-        { columns: "id,nama,kategori,alamat,deskripsi,foto_url,status,tanggal", order: "id" },
-        { columns: "id,nama,kategori,alamat,deskripsi,foto,status,tanggal", order: "id" }
-      ];
-      let result = null;
-      for (const attempt of attempts) {
-        result = await supabaseClient.from("laporan").select(attempt.columns).order(attempt.order, { ascending: false });
-        if (!result.error) break;
+      // RPC melewati kebutuhan SELECT langsung pada tabel untuk halaman publik,
+      // tetapi hanya mengembalikan kolom aman yang disetujui di fungsi SQL.
+      const { data, error } = await supabaseClient.rpc(
+        "silapor_get_laporan_publik_v2"
+      );
+
+      if (error) {
+        console.error("RPC histori publik gagal:", {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+
+        if (error.code === "PGRST202" || /function .* not found|could not find the function/i.test(error.message || "")) {
+          throw new Error("Fungsi histori publik v2 belum ada. Jalankan SQL_PERBAIKAN_HISTORI_PUBLIK_SILAPORFASUM.sql di proyek Supabase yang benar.");
+        }
+
+        throw new Error(`${error.message}${error.code ? ` (kode ${error.code})` : ""}`);
       }
-      if (!result || result.error) throw (result?.error || new Error("Kolom laporan tidak cocok."));
-      publicReports = Array.isArray(result.data) ? result.data : [];
-      historyMessage.textContent = publicReports.length
-        ? `Menampilkan ${publicReports.length} laporan dari database SiLaporFasum.`
-        : "Belum ada laporan yang tersimpan di database.";
+
+      publicReports = (Array.isArray(data) ? data : []).map((report) => ({
+        id: report.id,
+        kategori: report.kategori,
+        alamat: report.alamat,
+        deskripsi: report.deskripsi,
+        foto_url: report.foto_url,
+        foto_bukti_url: report.foto_bukti_url,
+        status: report.status,
+        created_at: report.created_at
+      }));
+
+      historyMessage.textContent = `Menampilkan ${publicReports.length} laporan dari database SiLaporFasum. Nama, email, dan nomor telepon pelapor tidak ditampilkan.`;
       renderPublicHistory();
     } catch (error) {
       console.error("Gagal memuat histori publik:", error);
-      historyMessage.textContent = "Histori belum dapat dimuat. Pastikan tabel laporan memiliki kebijakan SELECT yang sesuai di Supabase.";
-      historyList.innerHTML = '<div class="history-empty">Data tidak dapat ditampilkan. Periksa struktur tabel dan izin baca (RLS) Supabase.</div>';
+      historyMessage.textContent = `Histori belum dapat dimuat: ${error.message || "Periksa konfigurasi Supabase."}`;
+      historyList.innerHTML = '<div class="history-empty">Data belum dapat ditampilkan. Pastikan SQL fungsi histori publik sudah dijalankan di proyek Supabase yang benar.</div>';
     }
   }
 

@@ -1,0 +1,22 @@
+PERBAIKAN HISTORI PUBLIK SiLaporFasum
+
+Urutan wajib:
+1. Backup repositori website pengguna.
+2. Buka SQL_PERBAIKAN_HISTORI_PUBLIK_SILAPORFASUM.sql dan jalankan di Supabase SQL Editor
+   pada proyek ytasgufassdscmxnjeyr.
+3. Pastikan query verifikasi paling akhir berhasil.
+4. Ganti app.js, histori.html, dan service-worker.js pada root repositori website pengguna
+   dengan file dari ZIP ini. Pertahankan semua file dan fitur lain.
+5. Commit changes dan tunggu GitHub Pages selesai deploy.
+6. Buka histori.html dan tekan Ctrl+Shift+R. Jika memakai PWA, tutup lalu buka ulang aplikasi.
+7. Pastikan pesan halaman menunjukkan jumlah laporan yang dimuat. Jika gagal, lihat Console
+   untuk pesan RPC histori publik v2.
+
+Catatan:
+- Tidak mengubah isi tabel public.laporan.
+- Tidak menghapus/memindahkan laporan lama.
+- Histori menggunakan RPC silapor_get_laporan_publik_v2.
+- Kolom nama, kontak/nomor telepon, email, petugas_id, dan catatan internal tidak dikembalikan.
+- Semua baris laporan dibaca oleh fungsi tanpa batas 500 baris; urutan terbaru lebih dahulu.
+- Laporan lama tetap ada; halaman histori hanya menampilkan kolom non-sensitif yang dipilih.
+- Jangan menaruh service_role key/secret key di file frontend.
