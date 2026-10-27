@@ -12,7 +12,7 @@ button,input,select,textarea{font:inherit}
 .brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:var(--ink);font-weight:850;letter-spacing:-.35px;flex-shrink:0}
 .brand-copy{display:block;line-height:1.25}
 .brand small{display:block;font-size:10px;color:var(--muted);font-weight:500;letter-spacing:0;margin-top:4px}
-.brand-icon{width:43px;height:43px;border-radius:14px;background:linear-gradient(145deg,#2f7bff,#1552d7);color:white;display:grid;place-items:center;font-size:13px;font-weight:900;letter-spacing:.5px;box-shadow:0 7px 16px #155eef32}
+.brand-icon-img{width:43px;height:43px;flex:0 0 43px;display:block;object-fit:contain;border-radius:10px}
 .topbar nav{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
 .topbar nav a{color:#5d6b80;text-decoration:none;padding:10px 12px;border-radius:10px;font-size:12px;font-weight:700;white-space:nowrap;transition:background .16s,color .16s}
 .topbar nav a:hover,.topbar nav a.active{background:#edf3ff;color:var(--blue)}
@@ -390,3 +390,6 @@ body{
 }
 @media(prefers-reduced-motion:reduce){.duplicate-warning-dialog{animation:none}}
 
+
+/* Logo SiLaporFasum: hanya mengganti ikon brand, elemen lain tetap */
+@media(max-width:640px){.brand-icon-img{width:38px;height:38px;flex-basis:38px}.brand{gap:9px}}
