@@ -390,3 +390,8 @@ body{
 }
 @media(prefers-reduced-motion:reduce){.duplicate-warning-dialog{animation:none}}
 
+
+/* Logo resmi SiLaporFasum */
+.brand-icon{display:block;object-fit:contain;background:#fff;box-shadow:none;border-radius:10px;padding:0}
+.footer-brand .brand-icon{object-fit:contain}
+.mini-logo{object-fit:contain;background:#fff;padding:0;border-radius:7px}
