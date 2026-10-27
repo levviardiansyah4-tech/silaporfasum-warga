@@ -12,7 +12,7 @@ button,input,select,textarea{font:inherit}
 .brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:var(--ink);font-weight:850;letter-spacing:-.35px;flex-shrink:0}
 .brand-copy{display:block;line-height:1.25}
 .brand small{display:block;font-size:10px;color:var(--muted);font-weight:500;letter-spacing:0;margin-top:4px}
-.brand-icon-img{width:43px;height:43px;min-width:43px;flex:0 0 43px;display:block!important;visibility:visible;opacity:1;object-fit:contain;border-radius:10px;background:#fff}
+.brand-icon-img{width:43px;height:43px;min-width:43px;flex:0 0 43px;display:block!important;visibility:visible;opacity:1;object-fit:contain;object-position:center;border-radius:10px;background:#fff;position:relative;z-index:2}
 .topbar nav{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
 .topbar nav a{color:#5d6b80;text-decoration:none;padding:10px 12px;border-radius:10px;font-size:12px;font-weight:700;white-space:nowrap;transition:background .16s,color .16s}
 .topbar nav a:hover,.topbar nav a.active{background:#edf3ff;color:var(--blue)}

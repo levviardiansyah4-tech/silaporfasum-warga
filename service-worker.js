@@ -1,4 +1,4 @@
-const CACHE_NAME = "silaporfasum-user-2027-v9";
+const CACHE_NAME = "silaporfasum-user-2027-v10-logo-fix";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -10,6 +10,7 @@ const APP_FILES = [
   "./app.js?v=20261026-public-history-v2",
   "./pwa.js",
   "./manifest.json",
+  "./logo-silaporfasum.png",
   "./assets/logo-silaporfasum.png",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
